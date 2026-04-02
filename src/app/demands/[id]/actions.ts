@@ -98,14 +98,14 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
 
     if (org && emails.length > 0) {
       // Atomically claim the notification slot — only one concurrent request will get rows: 1
-      const { count: claimed } = await supabase
+      const { data: claimed } = await supabase
         .from('demands')
         .update({ threshold_notified_at: new Date().toISOString(), status: 'notified' })
         .eq('id', demandId)
         .is('threshold_notified_at', null)
-        .select('id', { count: 'exact', head: true })
+        .select('id')
 
-      if (claimed && claimed > 0) {
+      if (claimed && claimed.length > 0) {
         await sendThresholdEmail({
           to: emails,
           orgName: org.name,
