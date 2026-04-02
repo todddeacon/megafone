@@ -88,14 +88,12 @@ export async function approveClaimRequest(claimId: string): Promise<AdminActionS
     // Add to notification emails so they receive threshold alerts
     await supabase
       .from('organisation_notification_emails')
-      .insert({
+      .upsert({
         organisation_id: claim.organisation_id,
         email: claim.requester_email.toLowerCase(),
         label: claim.requester_name,
         source: 'org_rep',
-      })
-      .onConflict('organisation_id, email')
-      .ignore()
+      }, { onConflict: 'organisation_id, email', ignoreDuplicates: true })
 
     await supabase.from('organisations').update({ is_claimed: true }).eq('id', claim.organisation_id)
   }
