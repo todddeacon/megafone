@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): 
 
   if (!demand) return { title: 'Campaign not found' }
 
-  const orgName = (demand.organisation as { name: string } | null)?.name ?? 'an organisation'
+  const orgName = (demand.organisation as unknown as { name: string } | null)?.name ?? 'an organisation'
   const description = demand.summary?.slice(0, 160) ?? `A fan campaign directed at ${orgName} on Megafone.`
   const count = demand.support_count_cache ?? 0
   const meta = `${count.toLocaleString()} supporter${count !== 1 ? 's' : ''} · ${orgName}`
