@@ -9,8 +9,7 @@ export default async function HomePage() {
     supabase
       .from('demands')
       .select(`
-        id, headline, status, support_count_cache, notification_threshold, created_at, creator_user_id, is_example,
-        organisation:organisations(id, name, slug),
+        id, headline, status, support_count_cache, notification_threshold, created_at, creator_user_id, is_example, organisation_id,
         demand_questions(count)
       `)
       .eq('moderation_status', 'approved')
@@ -20,11 +19,19 @@ export default async function HomePage() {
 
   // Fetch creator profiles for all demands
   const creatorIds = [...new Set((demands ?? []).map((d) => d.creator_user_id).filter(Boolean))]
-  const { data: profiles } = creatorIds.length > 0
-    ? await supabase.from('profiles').select('id, name').in('id', creatorIds)
-    : { data: [] }
+  const orgIds = [...new Set((demands ?? []).map((d) => d.organisation_id).filter(Boolean))]
+
+  const [{ data: profiles }, { data: orgs }] = await Promise.all([
+    creatorIds.length > 0
+      ? supabase.from('profiles').select('id, name').in('id', creatorIds)
+      : Promise.resolve({ data: [] }),
+    orgIds.length > 0
+      ? supabase.from('organisations').select('id, name, slug').in('id', orgIds)
+      : Promise.resolve({ data: [] }),
+  ])
 
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]))
+  const orgMap = Object.fromEntries((orgs ?? []).map((o) => [o.id, o]))
 
   // Fetch demands the user is supporting
   const { data: supports } = user
@@ -38,7 +45,7 @@ export default async function HomePage() {
 
   const demandsWithCreator = (demands ?? []).map((d) => ({
     ...d,
-    organisation: (d.organisation as unknown as { id: string; name: string; slug: string } | null) ?? null,
+    organisation: orgMap[d.organisation_id] ?? null,
     creator: profileMap[d.creator_user_id] ?? null,
     question_count: (d.demand_questions as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
   }))
