@@ -1,10 +1,10 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn, signUp, signInWithProvider } from './actions'
 
-export default function LoginPage() {
+function LoginForm() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [signInState, signInAction, signInPending] = useActionState(signIn, { error: null })
   const [signUpState, signUpAction, signUpPending] = useActionState(signUp, { error: null })
@@ -161,5 +161,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

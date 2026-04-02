@@ -38,6 +38,7 @@ export default async function HomePage() {
 
   const demandsWithCreator = (demands ?? []).map((d) => ({
     ...d,
+    organisation: (d.organisation as unknown as { id: string; name: string; slug: string }[] | null)?.[0] ?? null,
     creator: profileMap[d.creator_user_id] ?? null,
     question_count: (d.demand_questions as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
   }))
