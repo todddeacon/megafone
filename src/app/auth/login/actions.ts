@@ -4,9 +4,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function signInWithProvider(formData: FormData): Promise<AuthState> {
+export async function signInWithProvider(formData: FormData): Promise<void> {
   const provider = formData.get('provider') as string
-  if (provider !== 'google' && provider !== 'apple') return { error: 'Invalid provider.' }
+  if (provider !== 'google' && provider !== 'apple') redirect('/auth/login?error=invalid_provider')
 
   const returnTo = safeReturnTo(formData.get('returnTo') as string)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -19,7 +19,7 @@ export async function signInWithProvider(formData: FormData): Promise<AuthState>
     },
   })
 
-  if (error || !data.url) return { error: 'Failed to sign in. Please try again.' }
+  if (error || !data.url) redirect('/auth/login?error=oauth_failed')
   redirect(data.url)
 }
 
