@@ -138,7 +138,7 @@ export async function sendThresholdEmail({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Megafone <notifications@megafone.co>',
+      from: 'Megafone <notifications@megafone.app>',
       to,
       subject: `${supportCount.toLocaleString()} fans are asking ${orgName} a question on Megafone`,
       html,
@@ -285,7 +285,7 @@ export async function sendResponseEmail({
 
   for (const chunk of chunks) {
     const batch = chunk.map((email) => ({
-      from: 'Megafone <notifications@megafone.co>',
+      from: 'Megafone <notifications@megafone.app>',
       to: [email],
       subject,
       html,
@@ -436,7 +436,7 @@ export async function sendFollowUpEmail({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Megafone <notifications@megafone.co>',
+      from: 'Megafone <notifications@megafone.app>',
       to,
       subject: `Follow-up questions from fans — ${orgName} on Megafone`,
       html,
