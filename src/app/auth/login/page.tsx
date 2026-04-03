@@ -135,6 +135,14 @@ function LoginForm() {
             </button>
           </form>
 
+          {mode === 'signin' && (
+            <p className="mt-3 text-center text-sm">
+              <a href="/auth/forgot-password" className="text-gray-400 hover:text-gray-600 underline">
+                Forgot your password?
+              </a>
+            </p>
+          )}
+
           <p className="mt-4 text-center text-sm text-gray-500">
             {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
             <button
