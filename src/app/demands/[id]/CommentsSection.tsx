@@ -274,7 +274,7 @@ function CommentRow({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const INITIAL_VISIBLE = 8
+const INITIAL_VISIBLE = 20
 
 export default function CommentsSection({
   demandId,

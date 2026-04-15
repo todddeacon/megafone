@@ -76,7 +76,8 @@ export function getCachedDemand(id: string) {
           .from('comments')
           .select('id, body, user_id, parent_comment_id, created_at')
           .eq('demand_id', id)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .limit(200),
         supabase
           .from('demand_updates')
           .select('id, type, body, pdf_url, video_url, created_at')

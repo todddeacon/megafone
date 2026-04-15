@@ -49,17 +49,11 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
     return { error: 'Failed to record your support. Please try again.' }
   }
 
-  const { count } = await supabase
-    .from('supports')
-    .select('*', { count: 'exact', head: true })
-    .eq('demand_id', demandId)
+  // Atomic increment — safe under concurrent load
+  const { data: countResult } = await supabase
+    .rpc('increment_support_count', { demand_id_input: demandId })
 
-  const newCount = count ?? 0
-
-  await supabase
-    .from('demands')
-    .update({ support_count_cache: newCount })
-    .eq('id', demandId)
+  const newCount = countResult ?? 0
 
   // Check whether this support just crossed the notification threshold
   const { data: demand } = await supabase
