@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { findUserByEmail } from '@/lib/supabase/admin'
+import { createAdminClient, findUserByEmail } from '@/lib/supabase/admin'
 
 export type AdminActionState = { error: string | null; success?: string }
 
@@ -25,11 +25,11 @@ export async function markOrgRep(
   if (!email) return { error: 'User email is required.' }
   if (!organisation_id) return { error: 'Organisation is required.' }
 
-  // Find user by email using the admin client
   const targetUser = await findUserByEmail(email)
   if (!targetUser) return { error: `No account found with email: ${email}` }
 
-  const { error: insertError } = await supabase
+  const admin = createAdminClient()
+  const { error: insertError } = await admin
     .from('org_reps')
     .insert({ user_id: targetUser.id, organisation_id })
 
@@ -47,7 +47,9 @@ export async function approveClaimRequest(claimId: string): Promise<AdminActionS
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { data: claim } = await supabase
+  const admin = createAdminClient()
+
+  const { data: claim } = await admin
     .from('claim_requests')
     .select('organisation_id, requester_name, requester_email, status')
     .eq('id', claimId)
@@ -56,33 +58,20 @@ export async function approveClaimRequest(claimId: string): Promise<AdminActionS
   if (!claim) return { error: 'Claim not found.' }
   if (claim.status !== 'pending') return { error: 'This claim has already been reviewed.' }
 
-  // Only process org_rep / notification email if this is a known organisation
   if (claim.organisation_id) {
-    // Find the user account by email
     const targetUser = await findUserByEmail(claim.requester_email)
     if (!targetUser) return { error: `No account found for ${claim.requester_email}. They must sign up first.` }
 
-    // Mark as org rep
-    const { error: repError } = await supabase
+    const { error: repError } = await admin
       .from('org_reps')
       .insert({ user_id: targetUser.id, organisation_id: claim.organisation_id })
 
     if (repError && repError.code !== '23505') return { error: 'Failed to create representative.' }
 
-    // Add to notification emails so they receive threshold alerts
-    await supabase
-      .from('organisation_notification_emails')
-      .upsert({
-        organisation_id: claim.organisation_id,
-        email: claim.requester_email.toLowerCase(),
-        label: claim.requester_name,
-        source: 'org_rep',
-      }, { onConflict: 'organisation_id, email', ignoreDuplicates: true })
-
-    await supabase.from('organisations').update({ is_claimed: true }).eq('id', claim.organisation_id)
+    await admin.from('organisations').update({ is_claimed: true }).eq('id', claim.organisation_id)
   }
 
-  await supabase.from('claim_requests').update({ status: 'approved' }).eq('id', claimId)
+  await admin.from('claim_requests').update({ status: 'approved' }).eq('id', claimId)
 
   revalidatePath('/admin')
   revalidatePath('/admin/org-emails')
@@ -95,7 +84,8 @@ export async function rejectClaimRequest(claimId: string): Promise<AdminActionSt
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('claim_requests')
     .update({ status: 'rejected' })
     .eq('id', claimId)
@@ -125,7 +115,8 @@ export async function addOrgNotificationEmail(
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) return { error: 'Please enter a valid email address.' }
 
-  const { error: insertError } = await supabase
+  const admin = createAdminClient()
+  const { error: insertError } = await admin
     .from('organisation_notification_emails')
     .insert({ organisation_id, email, label, source: 'manual' })
 
@@ -145,7 +136,8 @@ export async function removeOrgNotificationEmail(emailId: string): Promise<Admin
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('organisation_notification_emails')
     .delete()
     .eq('id', emailId)
@@ -162,7 +154,8 @@ export async function approveCampaign(demandId: string): Promise<AdminActionStat
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('demands')
     .update({ moderation_status: 'approved' })
     .eq('id', demandId)
@@ -179,7 +172,8 @@ export async function removeCampaign(demandId: string): Promise<AdminActionState
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('demands')
     .update({ moderation_status: 'removed' })
     .eq('id', demandId)
@@ -196,7 +190,8 @@ export async function deleteCampaignAsAdmin(demandId: string): Promise<AdminActi
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('demands')
     .delete()
     .eq('id', demandId)
@@ -216,10 +211,12 @@ export async function logNotification(
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
+  const admin = createAdminClient()
+
   const demand_id = (formData.get('demand_id') as string)?.trim()
   if (!demand_id) return { error: 'Demand ID is required.' }
 
-  const { data: demand } = await supabase
+  const { data: demand } = await admin
     .from('demands')
     .select('id, status')
     .eq('id', demand_id)
@@ -227,15 +224,14 @@ export async function logNotification(
 
   if (!demand) return { error: 'Demand not found. Check the ID and try again.' }
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await admin
     .from('organisation_notifications')
     .insert({ demand_id })
 
   if (insertError) return { error: 'Failed to log notification.' }
 
-  // Advance status to notified if still in early stage
   if (['building', 'live'].includes(demand.status)) {
-    await supabase.from('demands').update({ status: 'notified' }).eq('id', demand_id)
+    await admin.from('demands').update({ status: 'notified' }).eq('id', demand_id)
   }
 
   revalidatePath(`/demands/${demand_id}`)

@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
-import { getEmailsForUserIds } from '@/lib/supabase/admin'
+import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 
 export type ActionState = { error: string | null }
 
@@ -62,9 +62,10 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
     .eq('id', demandId)
     .single()
 
-  // Auto-transition building → live on first supporter
+  // Auto-transition building → live on first supporter (uses admin client to bypass RLS)
+  const admin = createAdminClient()
   if (newCount === 1 && demand?.status === 'building') {
-    await supabase.from('demands').update({ status: 'live' }).eq('id', demandId)
+    await admin.from('demands').update({ status: 'live' }).eq('id', demandId)
   }
 
   if (
@@ -83,7 +84,7 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
         .select('body')
         .eq('demand_id', demandId)
         .eq('is_followup', false),
-      supabase
+      admin
         .from('organisation_notification_emails')
         .select('email')
         .eq('organisation_id', demand.organisation_id),
@@ -93,7 +94,7 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
 
     if (org && emails.length > 0) {
       // Atomically claim the notification slot — only one concurrent request will get rows: 1
-      const { data: claimed } = await supabase
+      const { data: claimed } = await admin
         .from('demands')
         .update({ threshold_notified_at: new Date().toISOString(), status: 'notified' })
         .eq('id', demandId)
@@ -215,6 +216,16 @@ export async function addFollowUpQuestion(
   const body = (formData.get('body') as string)?.trim()
   if (!body) return { error: 'Question cannot be empty.' }
 
+  const profanityMatch = checkProfanity(body, 'campaign')
+  if (profanityMatch) {
+    return { error: 'Your question contains language that doesn\'t meet our community guidelines.' }
+  }
+
+  const moderation = await checkModeration(body)
+  if (moderation.action !== 'approve') {
+    return { error: 'Your question contains content that doesn\'t meet our community guidelines.' }
+  }
+
   // Round = number of official responses so far + 1
   const { count: responseCount } = await supabase
     .from('demand_updates')
@@ -269,6 +280,16 @@ export async function addCreatorUpdate(
   const body = (formData.get('body') as string)?.trim()
   if (!body) return { error: 'Update cannot be empty.' }
   if (body.length > 2000) return { error: 'Update must be under 2000 characters.' }
+
+  const profanityMatch = checkProfanity(body, 'campaign')
+  if (profanityMatch) {
+    return { error: 'Your update contains language that doesn\'t meet our community guidelines.' }
+  }
+
+  const moderation = await checkModeration(body)
+  if (moderation.action !== 'approve') {
+    return { error: 'Your update contains content that doesn\'t meet our community guidelines.' }
+  }
 
   const { error: insertError } = await supabase
     .from('demand_updates')
@@ -444,7 +465,8 @@ export async function postOfficialResponse(
 
   if (insertError) return { error: 'Failed to post response. Please try again.' }
 
-  await supabase.from('demands').update({ status: 'responded' }).eq('id', demandId)
+  const adminForResponse = createAdminClient()
+  await adminForResponse.from('demands').update({ status: 'responded' }).eq('id', demandId)
 
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
@@ -501,14 +523,15 @@ export async function notifyOrgFollowUp(demandId: string): Promise<ActionState> 
 
   const latestRound = latestQuestion?.round ?? 2
 
+  const adminForNotify = createAdminClient()
   const [{ data: roundQuestions }, { data: org }, { data: notifEmails }] = await Promise.all([
     supabase.from('demand_questions').select('body').eq('demand_id', demandId).eq('round', latestRound),
     supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
-    supabase.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+    adminForNotify.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
   ])
 
   await supabase.from('demands').update({ status: 'notified' }).eq('id', demandId)
-  await supabase.from('organisation_notifications').insert({ demand_id: demandId, sent_at: new Date().toISOString() })
+  await adminForNotify.from('organisation_notifications').insert({ demand_id: demandId, sent_at: new Date().toISOString() })
 
   const emails = notifEmails?.map((e) => e.email) ?? []
   if (org && emails.length > 0) {

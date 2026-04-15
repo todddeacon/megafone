@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { checkModeration, checkProfanity } from '@/lib/moderation'
 
 export type EditDemandState = { error: string | null }
 
@@ -37,6 +38,18 @@ export async function updateDemand(
   if (!summary) return { error: 'Summary is required.' }
   if (questions.length === 0) return { error: 'At least one question is required.' }
   if (!notification_threshold || notification_threshold < 1) return { error: 'Supporter target is required.' }
+
+  // Content moderation
+  const textToCheck = `${headline}\n${summary}\n${questions.join('\n')}`
+  const profanityMatch = checkProfanity(textToCheck, 'campaign')
+  if (profanityMatch) {
+    return { error: 'Your campaign contains language that doesn\'t meet our community guidelines.' }
+  }
+
+  const moderation = await checkModeration(textToCheck)
+  if (moderation.action === 'block') {
+    return { error: 'Your campaign contains content that doesn\'t meet our community guidelines.' }
+  }
 
   // Update the demand
   const { error: updateError } = await supabase
