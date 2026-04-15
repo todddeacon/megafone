@@ -1,10 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getEmailsForUserIds } from '@/lib/supabase/admin'
 
 export type ActionState = { error: string | null }
 
@@ -26,6 +26,7 @@ export async function setNickname(nickname: string): Promise<ActionState> {
   if (error) return { error: 'Failed to save nickname.' }
 
   revalidatePath('/')
+  revalidateTag('demands-list', { expire: 0 })
   return { error: null }
 }
 
@@ -121,6 +122,8 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
   }
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
   return { error: null }
 }
 
@@ -169,6 +172,7 @@ export async function postComment(
   if (insertError) return { error: 'Failed to post comment. Please try again.' }
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
 }
 
@@ -188,6 +192,7 @@ export async function deleteComment(commentId: string): Promise<ActionState> {
 
   await supabase.from('comments').delete().eq('id', commentId)
   revalidatePath(`/demands/${comment.demand_id}`)
+  revalidateTag(`demand-${comment.demand_id}`, { expire: 0 })
   return { error: null }
 }
 
@@ -240,6 +245,8 @@ export async function addFollowUpQuestion(
     .insert({ demand_id: demandId, author_user_id: user.id, type: 'followup_question', body })
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
   return { error: null }
 }
 
@@ -276,6 +283,7 @@ export async function addCreatorUpdate(
   if (insertError) return { error: 'Failed to post update. Please try again.' }
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
 }
 
@@ -320,6 +328,7 @@ export async function addDemandLink(
   if (insertError) return { error: 'Failed to add content. Please try again.' }
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
 }
 
@@ -347,6 +356,8 @@ export async function setResolutionStatus(
   await supabase.from('demands').update({ status: resolution }).eq('id', demandId)
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
   return { error: null }
 }
 
@@ -442,6 +453,8 @@ export async function postOfficialResponse(
   await supabase.from('demands').update({ status: 'responded' }).eq('id', demandId)
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
 
   // Email all supporters — fetch their IDs then resolve emails via admin client
   const [{ data: org }, { data: supporters }] = await Promise.all([
@@ -450,13 +463,8 @@ export async function postOfficialResponse(
   ])
 
   if (org && supporters && supporters.length > 0) {
-    const adminClient = createAdminClient()
-    const { data: { users } } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
-
     const supporterIds = new Set(supporters.map((s) => s.user_id))
-    const emails = users
-      .filter((u) => supporterIds.has(u.id) && u.email)
-      .map((u) => u.email!)
+    const emails = await getEmailsForUserIds(supporterIds)
 
     if (emails.length > 0) {
       await sendResponseEmail({
@@ -522,5 +530,7 @@ export async function notifyOrgFollowUp(demandId: string): Promise<ActionState> 
   }
 
   revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
   return { error: null }
 }

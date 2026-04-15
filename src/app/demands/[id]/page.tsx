@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { getCachedDemand } from '@/lib/cached-queries'
 
 export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): Promise<Metadata> {
   const { id } = await params
@@ -68,56 +69,25 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: demand }, { data: { user } }] = await Promise.all([
-    supabase
-      .from('demands')
-      .select(`
-        *,
-        organisation:organisations(id, name, slug),
-        questions:demand_questions(id, body, is_followup, round, created_at)
-      `)
-      .eq('id', id)
-      .single(),
+  // Fetch cached public data and user auth in parallel
+  const [cachedData, { data: { user } }] = await Promise.all([
+    getCachedDemand(id),
     supabase.auth.getUser(),
   ])
 
-  if (!demand) notFound()
+  if (!cachedData) notFound()
+
+  const { demand, comments, updates, videoLinks, notifications, creatorName } = cachedData
 
   // Hide pending_review campaigns from everyone except the creator
   if (demand.moderation_status === 'pending_review' && user?.id !== demand.creator_user_id) notFound()
   if (demand.moderation_status === 'removed') notFound()
 
-  const [
-    supportResult,
-    commentsResult,
-    updatesResult,
-    linksResult,
-    notificationsResult,
-    orgRepResult,
-  ] = await Promise.all([
+  // Per-user queries (not cached — depend on logged-in user)
+  const [supportResult, orgRepResult, currentUserProfileResult] = await Promise.all([
     user
       ? supabase.from('supports').select('id').eq('demand_id', id).eq('user_id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase
-      .from('comments')
-      .select('id, body, user_id, parent_comment_id, created_at')
-      .eq('demand_id', id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('demand_updates')
-      .select('id, type, body, pdf_url, video_url, created_at')
-      .eq('demand_id', id)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('demand_links')
-      .select('id, url, title')
-      .eq('demand_id', id)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('organisation_notifications')
-      .select('id, sent_at')
-      .eq('demand_id', id)
-      .order('sent_at', { ascending: true }),
     user
       ? supabase
           .from('org_reps')
@@ -126,37 +96,14 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
           .eq('organisation_id', demand.organisation_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
-  ])
-
-  const isSupporter = !!supportResult.data
-  const isCreator = user?.id === demand.creator_user_id
-  const isOrgRep = !!orgRepResult.data
-  const updates = updatesResult.data ?? []
-  const videoLinks = linksResult.data ?? []
-  const notifications = notificationsResult.data ?? []
-  const rawComments = commentsResult.data ?? []
-
-  const commenterIds = [...new Set(rawComments.map((c: { user_id: string }) => c.user_id))]
-  const [creatorProfileResult, commenterProfilesResult, currentUserProfileResult] = await Promise.all([
-    supabase.from('profiles').select('id, name').eq('id', demand.creator_user_id).maybeSingle(),
-    commenterIds.length > 0
-      ? supabase.from('profiles').select('id, name, nickname').in('id', commenterIds)
-      : Promise.resolve({ data: [] }),
     user
       ? supabase.from('profiles').select('nickname').eq('id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
-  const commenterProfileMap = Object.fromEntries(
-    (commenterProfilesResult.data ?? []).map((p: { id: string; name: string; nickname: string | null }) => [p.id, p])
-  )
-
-  const comments = rawComments.map((c: { id: string; body: string; user_id: string; parent_comment_id: string | null; created_at: string }) => ({
-    ...c,
-    profile: commenterProfileMap[c.user_id] ?? null,
-  }))
-
-  const creatorName = creatorProfileResult.data?.name ?? null
+  const isSupporter = !!supportResult.data
+  const isCreator = user?.id === demand.creator_user_id
+  const isOrgRep = !!orgRepResult.data
   const hasNickname = !!(currentUserProfileResult.data?.nickname)
 
   const officialResponses = (updates as { id: string; type: string; body: string; pdf_url: string | null; video_url: string | null; created_at: string }[])

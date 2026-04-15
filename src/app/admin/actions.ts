@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { findUserByEmail } from '@/lib/supabase/admin'
 
 export type AdminActionState = { error: string | null; success?: string }
 
@@ -26,15 +26,7 @@ export async function markOrgRep(
   if (!organisation_id) return { error: 'Organisation is required.' }
 
   // Find user by email using the admin client
-  const adminClient = createAdminClient()
-  const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  })
-
-  if (listError) return { error: 'Failed to look up users.' }
-
-  const targetUser = users.find((u) => u.email?.toLowerCase() === email)
+  const targetUser = await findUserByEmail(email)
   if (!targetUser) return { error: `No account found with email: ${email}` }
 
   const { error: insertError } = await supabase
@@ -67,15 +59,7 @@ export async function approveClaimRequest(claimId: string): Promise<AdminActionS
   // Only process org_rep / notification email if this is a known organisation
   if (claim.organisation_id) {
     // Find the user account by email
-    const adminClient = createAdminClient()
-    const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    })
-
-    if (listError) return { error: 'Failed to look up users.' }
-
-    const targetUser = users.find((u) => u.email?.toLowerCase() === claim.requester_email.toLowerCase())
+    const targetUser = await findUserByEmail(claim.requester_email)
     if (!targetUser) return { error: `No account found for ${claim.requester_email}. They must sign up first.` }
 
     // Mark as org rep
