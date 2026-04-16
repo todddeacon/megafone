@@ -106,31 +106,6 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   const isOrgRep = !!orgRepResult.data
   const hasNickname = !!(currentUserProfileResult.data?.nickname)
 
-  // Fetch recent supporters for the ticker
-  const { data: recentSupportRows } = await supabase
-    .from('supports')
-    .select('user_id, created_at')
-    .eq('demand_id', id)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  let recentSupporters: { name: string; created_at: string }[] = []
-  if (recentSupportRows && recentSupportRows.length > 0) {
-    const supporterIds = recentSupportRows.map((s) => s.user_id)
-    const { data: supporterProfiles } = await supabase
-      .from('profiles')
-      .select('id, name, nickname')
-      .in('id', supporterIds)
-    const profileMap = new Map((supporterProfiles ?? []).map((p) => [p.id, p]))
-    recentSupporters = recentSupportRows.map((s) => {
-      const p = profileMap.get(s.user_id)
-      return {
-        name: p?.nickname ?? p?.name?.split(' ')[0] ?? 'A fan',
-        created_at: s.created_at,
-      }
-    })
-  }
-
   const officialResponses = (updates as { id: string; type: string; body: string; pdf_url: string | null; video_url: string | null; created_at: string }[])
     .filter((u) => u.type === 'official_response')
   const hasResponse = officialResponses.length > 0
@@ -253,7 +228,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 notificationThreshold={demand.notification_threshold ?? null}
                 headline={demand.headline}
                 orgName={orgName}
-                recentSupporters={recentSupporters}
+
               />
             </div>
 
@@ -322,7 +297,6 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               notificationThreshold={demand.notification_threshold ?? null}
               headline={demand.headline}
               orgName={orgName}
-              recentSupporters={recentSupporters}
             />
             </div>
 

@@ -1,44 +1,8 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supportDemand } from './actions'
-
-// ── Fade-cycling recent supporters ──────────────────────────────────────────
-
-function RecentSupportersCycle({ supporters }: { supporters: { name: string; created_at: string }[] }) {
-  const [index, setIndex] = useState(0)
-  const [visible, setVisible] = useState(true)
-
-  useEffect(() => {
-    if (supporters.length <= 1) return
-
-    const interval = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setIndex((i) => (i + 1) % supporters.length)
-        setVisible(true)
-      }, 400) // fade out duration
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [supporters.length])
-
-  const current = supporters[index]
-
-  return (
-    <div className="px-5 py-3 border-t border-gray-100 bg-white rounded-b-2xl">
-      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Recent supporters</p>
-      <div
-        className="flex items-center justify-between transition-opacity duration-400"
-        style={{ opacity: visible ? 1 : 0 }}
-      >
-        <span className="text-xs text-gray-600 font-medium">{current.name}</span>
-        <span className="text-[10px] text-gray-400">{timeAgo(current.created_at)}</span>
-      </div>
-    </div>
-  )
-}
 
 function SignInModal({ onClose }: { onClose: () => void }) {
   const pathname = usePathname()
@@ -229,17 +193,6 @@ function PostSupportShareScreen({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-function timeAgo(ts: string): string {
-  const diff = Date.now() - new Date(ts).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
 interface Props {
   demandId: string
   isAuthenticated: boolean
@@ -250,7 +203,6 @@ interface Props {
   notificationThreshold: number | null
   headline: string
   orgName: string
-  recentSupporters?: { name: string; created_at: string }[]
 }
 
 export default function SupportButton({
@@ -263,7 +215,6 @@ export default function SupportButton({
   notificationThreshold,
   headline,
   orgName,
-  recentSupporters = [],
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -400,11 +351,6 @@ export default function SupportButton({
           )}
 
         </div>
-
-        {/* Recent supporters — fade cycle */}
-        {recentSupporters.length > 0 && (
-          <RecentSupportersCycle supporters={recentSupporters} />
-        )}
 
       </div>
     </div>
