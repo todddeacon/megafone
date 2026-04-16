@@ -449,6 +449,352 @@ export async function sendFollowUpEmail({
   }
 }
 
+// ── Shared helpers ──────────────────────────────────────────────────────────
+
+function emailShell(title: string, body: string, footerText: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+          <tr>
+            <td style="background-color: #064e3b; border-radius: 12px 12px 0 0; padding: 28px 40px;">
+              <span style="font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">MEGAFONE</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+              ${body}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f3f4f6; border-radius: 0 0 12px 12px; padding: 20px 40px; border: 1px solid #e5e7eb; border-top: none;">
+              <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.6;">
+                ${footerText}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+function ctaButton(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+  <tr>
+    <td style="background-color: #064e3b; border-radius: 8px;">
+      <a href="${href}" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 700; color: #ffffff; text-decoration: none;">
+        ${label}
+      </a>
+    </td>
+  </tr>
+</table>`
+}
+
+async function sendSingle(apiKey: string, to: string, subject: string, html: string) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: 'Megafone <notifications@megafone.app>', to: [to], subject, html }),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    console.error('[email] Resend error:', res.status, body)
+  }
+}
+
+async function sendBatch(apiKey: string, recipients: string[], subject: string, html: string) {
+  const chunks: string[][] = []
+  for (let i = 0; i < recipients.length; i += 100) chunks.push(recipients.slice(i, i + 100))
+
+  for (const chunk of chunks) {
+    const batch = chunk.map((email) => ({
+      from: 'Megafone <notifications@megafone.app>',
+      to: [email],
+      subject,
+      html,
+    }))
+
+    const res = await fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(batch),
+    })
+
+    if (!res.ok) {
+      const body = await res.text()
+      console.error('[email] Resend batch error:', res.status, body)
+    }
+  }
+}
+
+// ── Email 1: Welcome supporter ──────────────────────────────────────────────
+
+interface WelcomeSupporterParams {
+  to: string
+  creatorName: string
+  orgName: string
+  demandHeadline: string
+  demandId: string
+  supportCount: number
+}
+
+export async function sendWelcomeSupporterEmail({
+  to,
+  creatorName,
+  orgName,
+  demandHeadline,
+  demandId,
+  supportCount,
+}: WelcomeSupporterParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY not set — skipping welcome supporter')
+    return
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Thank you for adding your support
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(demandHeadline)}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      You've joined <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong> asking ${escapeHtml(orgName)} important questions on Megafone.
+    </p>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      The more supporters this campaign gets, the harder it is for ${escapeHtml(orgName)} to ignore. Share it with friends who care about this too.
+    </p>
+
+    ${ctaButton(campaignUrl, 'Share this campaign →')}
+
+    <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+      We'll email you when there's news — like when there are updates or ${escapeHtml(orgName)} responds.
+    </p>`
+
+  const html = emailShell(
+    `You're supporting ${escapeHtml(creatorName)}'s campaign on Megafone`,
+    body,
+    `You received this because you supported a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+  )
+
+  await sendSingle(apiKey, to, `You're supporting ${creatorName}'s campaign on Megafone`, html)
+}
+
+// ── Email 2: Campaign sent to organisation ──────────────────────────────────
+
+interface CampaignSentParams {
+  to: string[]
+  orgName: string
+  demandHeadline: string
+  demandId: string
+  supportCount: number
+  threshold: number
+}
+
+export async function sendCampaignSentEmail({
+  to,
+  orgName,
+  demandHeadline,
+  demandId,
+  supportCount,
+  threshold,
+}: CampaignSentParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY not set — skipping campaign sent')
+    return
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      ${escapeHtml(orgName)} has been notified
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(demandHeadline)}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Great news — the campaign you support has reached its target of <strong style="color: #064e3b;">${threshold.toLocaleString()} supporters</strong> and has been sent to ${escapeHtml(orgName)}.
+    </p>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Together with <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong>, you've made sure these questions get heard. ${escapeHtml(orgName)} now has an opportunity to respond — and all supporters will be notified when they do.
+    </p>
+
+    ${ctaButton(campaignUrl, 'View the campaign →')}`
+
+  const html = emailShell(
+    `Your campaign has been sent to ${escapeHtml(orgName)}`,
+    body,
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+  )
+
+  await sendBatch(apiKey, to, `Your campaign has been sent to ${orgName}`, html)
+}
+
+// ── Email 3: Campaign resolved ──────────────────────────────────────────────
+
+interface CampaignResolvedParams {
+  to: string[]
+  creatorName: string
+  orgName: string
+  demandHeadline: string
+  demandId: string
+  supportCount: number
+  resolution: 'resolved' | 'unsatisfactory'
+}
+
+export async function sendCampaignResolvedEmail({
+  to,
+  creatorName,
+  orgName,
+  demandHeadline,
+  demandId,
+  supportCount,
+  resolution,
+}: CampaignResolvedParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY not set — skipping campaign resolved')
+    return
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  const isResolved = resolution === 'resolved'
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Campaign outcome
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${isResolved ? 'This campaign has been resolved' : 'Response marked as unsatisfactory'}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      ${isResolved
+        ? `${escapeHtml(creatorName)} has reviewed the response from ${escapeHtml(orgName)} and now considers it is resolved.`
+        : `The creator of this campaign has reviewed the response from ${escapeHtml(orgName)} and feels the answers were not satisfactory.`
+      }
+    </p>
+
+    <!-- Campaign headline -->
+    <div style="background-color: #f0fdf4; border-left: 4px solid #064e3b; border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 16px; font-weight: 700; color: #064e3b; line-height: 1.4;">
+        ${escapeHtml(demandHeadline)}
+      </p>
+    </div>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      ${isResolved
+        ? `Thank you for being one of <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong> who made this happen. Your voice made a large difference.`
+        : `The campaign page has the full details. As one of <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong>, your voice still matters — follow-up questions may be submitted.`
+      }
+    </p>
+
+    ${ctaButton(campaignUrl, isResolved ? 'View the full outcome →' : 'View the campaign →')}`
+
+  const html = emailShell(
+    `Campaign outcome: ${escapeHtml(demandHeadline)}`,
+    body,
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+  )
+
+  await sendBatch(apiKey, to, `Campaign outcome: ${demandHeadline}`, html)
+}
+
+// ── Email 6: Creator posted an update ───────────────────────────────────────
+
+interface CreatorUpdateEmailParams {
+  to: string[]
+  creatorName: string
+  demandHeadline: string
+  demandId: string
+  updateBody: string | null
+  hasVideo: boolean
+}
+
+export async function sendCreatorUpdateEmail({
+  to,
+  creatorName,
+  demandHeadline,
+  demandId,
+  updateBody,
+  hasVideo,
+}: CreatorUpdateEmailParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn('[email] RESEND_API_KEY not set — skipping creator update')
+    return
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  let snippetHtml = ''
+  if (updateBody) {
+    const snippet = updateBody.length > 300 ? updateBody.slice(0, 300) + '…' : updateBody
+    snippetHtml = `
+      <p style="margin: 0 0 28px 0; font-size: 15px; color: #4b5563; line-height: 1.6; border-left: 3px solid #d1fae5; padding-left: 16px; font-style: italic;">
+        &ldquo;${escapeHtml(snippet)}&rdquo;
+      </p>`
+  } else if (hasVideo) {
+    snippetHtml = `
+      <p style="margin: 0 0 28px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+        The creator has shared new video content. View it on the campaign page.
+      </p>`
+  }
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Campaign update
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(demandHeadline)}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      ${escapeHtml(creatorName)}'s campaign you support has posted a new update.
+    </p>
+
+    ${snippetHtml}
+
+    ${ctaButton(campaignUrl, 'View the full update →')}`
+
+  const html = emailShell(
+    `New update by ${escapeHtml(creatorName)}`,
+    body,
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+  )
+
+  await sendBatch(apiKey, to, `New update by ${creatorName}`, html)
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

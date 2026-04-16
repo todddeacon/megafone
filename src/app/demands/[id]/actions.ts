@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail } from '@/lib/email'
+import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 
@@ -55,10 +55,10 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
 
   const newCount = countResult ?? 0
 
-  // Check whether this support just crossed the notification threshold
+  // Fetch demand details + creator + org for emails
   const { data: demand } = await supabase
     .from('demands')
-    .select('notification_threshold, threshold_notified_at, headline, summary, organisation_id, status')
+    .select('notification_threshold, threshold_notified_at, headline, summary, organisation_id, status, creator_user_id')
     .eq('id', demandId)
     .single()
 
@@ -68,6 +68,26 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
     await admin.from('demands').update({ status: 'live' }).eq('id', demandId)
   }
 
+  // Send welcome supporter email
+  if (demand && user.email) {
+    const [{ data: creatorProfile }, { data: org }] = await Promise.all([
+      supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
+      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+    ])
+
+    if (org) {
+      await sendWelcomeSupporterEmail({
+        to: user.email,
+        creatorName: creatorProfile?.name ?? 'A fan',
+        orgName: org.name,
+        demandHeadline: demand.headline,
+        demandId,
+        supportCount: newCount,
+      })
+    }
+  }
+
+  // Check whether this support just crossed the notification threshold
   if (
     demand?.notification_threshold &&
     newCount >= demand.notification_threshold &&
@@ -112,6 +132,23 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
           summary: demand.summary ?? '',
           questions: questions?.map((q) => q.body) ?? [],
         })
+
+        // Email 2: notify all supporters that the campaign has been sent
+        const { data: supporters } = await supabase.from('supports').select('user_id').eq('demand_id', demandId)
+        if (supporters && supporters.length > 0) {
+          const supporterIds = new Set(supporters.map((s) => s.user_id))
+          const supporterEmails = await getEmailsForUserIds(supporterIds)
+          if (supporterEmails.length > 0) {
+            await sendCampaignSentEmail({
+              to: supporterEmails,
+              orgName: org.name,
+              demandHeadline: demand.headline,
+              demandId,
+              supportCount: newCount,
+              threshold: demand.notification_threshold,
+            })
+          }
+        }
       }
     }
   }
@@ -270,7 +307,7 @@ export async function addCreatorUpdate(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('creator_user_id')
+    .select('creator_user_id, headline')
     .eq('id', demandId)
     .single()
 
@@ -297,6 +334,27 @@ export async function addCreatorUpdate(
 
   if (insertError) return { error: 'Failed to post update. Please try again.' }
 
+  // Email all supporters about the update
+  const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
+    supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+    supabase.from('supports').select('user_id').eq('demand_id', demandId),
+  ])
+
+  if (supporters && supporters.length > 0) {
+    const supporterIds = new Set(supporters.map((s) => s.user_id))
+    const emails = await getEmailsForUserIds(supporterIds)
+    if (emails.length > 0) {
+      await sendCreatorUpdateEmail({
+        to: emails,
+        creatorName: creatorProfile?.name ?? 'The campaign creator',
+        demandHeadline: demand.headline,
+        demandId,
+        updateBody: body,
+        hasVideo: false,
+      })
+    }
+  }
+
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
@@ -317,7 +375,7 @@ export async function addDemandLink(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('creator_user_id')
+    .select('creator_user_id, headline')
     .eq('id', demandId)
     .single()
 
@@ -342,6 +400,27 @@ export async function addDemandLink(
 
   if (insertError) return { error: 'Failed to add content. Please try again.' }
 
+  // Email supporters about new content
+  const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
+    supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+    supabase.from('supports').select('user_id').eq('demand_id', demandId),
+  ])
+
+  if (supporters && supporters.length > 0) {
+    const supporterIds = new Set(supporters.map((s) => s.user_id))
+    const emails = await getEmailsForUserIds(supporterIds)
+    if (emails.length > 0) {
+      await sendCreatorUpdateEmail({
+        to: emails,
+        creatorName: creatorProfile?.name ?? 'The campaign creator',
+        demandHeadline: demand.headline,
+        demandId,
+        updateBody: null,
+        hasVideo: true,
+      })
+    }
+  }
+
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
@@ -357,7 +436,7 @@ export async function setResolutionStatus(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('creator_user_id, status')
+    .select('creator_user_id, status, headline, organisation_id, support_count_cache')
     .eq('id', demandId)
     .single()
 
@@ -369,6 +448,31 @@ export async function setResolutionStatus(
   if (!valid.includes(resolution)) return { error: 'Invalid resolution.' }
 
   await supabase.from('demands').update({ status: resolution }).eq('id', demandId)
+
+  // Email supporters about the resolution (resolved or unsatisfactory only)
+  if (resolution === 'resolved' || resolution === 'unsatisfactory') {
+    const [{ data: creatorProfile }, { data: org }, { data: supporters }] = await Promise.all([
+      supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
+      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+      supabase.from('supports').select('user_id').eq('demand_id', demandId),
+    ])
+
+    if (org && supporters && supporters.length > 0) {
+      const supporterIds = new Set(supporters.map((s) => s.user_id))
+      const emails = await getEmailsForUserIds(supporterIds)
+      if (emails.length > 0) {
+        await sendCampaignResolvedEmail({
+          to: emails,
+          creatorName: creatorProfile?.name ?? 'The campaign creator',
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+          supportCount: demand.support_count_cache ?? supporters.length,
+          resolution: resolution as 'resolved' | 'unsatisfactory',
+        })
+      }
+    }
+  }
 
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })

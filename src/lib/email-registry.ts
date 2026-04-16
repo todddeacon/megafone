@@ -46,6 +46,43 @@ export const emailRegistry: EmailDefinition[] = [
     source: 'src/app/demands/[id]/actions.ts → notifyOrgFollowUp()',
   },
 
+  {
+    id: 'welcome-supporter',
+    name: 'Welcome supporter',
+    description: 'Thanks the user for supporting, shows current supporter count, and encourages them to share the campaign with friends.',
+    trigger: 'A user supports a campaign.',
+    recipients: 'The user who just supported',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand()',
+  },
+  {
+    id: 'campaign-sent',
+    name: 'Campaign sent to organisation',
+    description: 'Notifies all supporters that the campaign has reached its target and been sent to the organisation.',
+    trigger: 'A campaign crosses its notification threshold and the organisation is notified.',
+    recipients: 'All supporters of the campaign (batched in groups of 100)',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand() (threshold crossed)',
+  },
+  {
+    id: 'campaign-resolved',
+    name: 'Campaign resolved',
+    description: 'Notifies all supporters of the outcome when the creator marks a campaign as resolved or unsatisfactory.',
+    trigger: 'The campaign creator marks the outcome as resolved or unsatisfactory.',
+    recipients: 'All supporters of the campaign (batched in groups of 100)',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → setResolutionStatus()',
+  },
+  {
+    id: 'creator-update',
+    name: 'Creator posted an update',
+    description: 'Notifies all supporters when the campaign creator posts a text update or adds new video/link content.',
+    trigger: 'The campaign creator posts an update or adds linked content.',
+    recipients: 'All supporters of the campaign (batched in groups of 100)',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → addCreatorUpdate() / addDemandLink()',
+  },
+
   // ── Supabase auth emails (managed by Supabase) ────────────────
 
   {
