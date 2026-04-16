@@ -23,14 +23,15 @@ function isAdmin(email: string) {
 export type TestEmailState = { error: string | null; success?: string }
 
 export async function sendTestEmail(
-  emailType: string
+  emailType: string,
+  recipientEmail?: string
 ): Promise<TestEmailState> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
 
-  const to = user.email
+  const to = recipientEmail?.trim() || user.email
   const demandId = 'test-000'
   const orgName = 'Everton FC'
   const demandHeadline = 'Why are season ticket prices increasing by 15% next year?'

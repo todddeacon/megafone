@@ -1,6 +1,13 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { emailRegistry } from '@/lib/email-registry'
+import { emailRegistry, type EmailAudience } from '@/lib/email-registry'
+
+const sections: { audience: EmailAudience; title: string; subtitle: string; tagColor: string }[] = [
+  { audience: 'supporters', title: 'Supporter emails', subtitle: 'Sent to fans who support a campaign', tagColor: 'text-emerald-700 bg-emerald-50' },
+  { audience: 'creators', title: 'Creator emails', subtitle: 'Sent to the person who created a campaign', tagColor: 'text-amber-700 bg-amber-50' },
+  { audience: 'organisations', title: 'Organisation emails', subtitle: 'Sent to the organisation a campaign is directed at', tagColor: 'text-blue-700 bg-blue-50' },
+  { audience: 'auth', title: 'Authentication emails', subtitle: 'Account verification and access (managed by Supabase)', tagColor: 'text-violet-700 bg-violet-50' },
+]
 
 export default async function AdminEmailsPage() {
   const supabase = await createClient()
@@ -8,9 +15,6 @@ export default async function AdminEmailsPage() {
 
   if (!user) redirect('/auth/login')
   if (user.email !== process.env.ADMIN_EMAIL) redirect('/admin')
-
-  const megafoneEmails = emailRegistry.filter((e) => e.sender === 'megafone')
-  const supabaseEmails = emailRegistry.filter((e) => e.sender === 'supabase')
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
@@ -25,8 +29,7 @@ export default async function AdminEmailsPage() {
           </a>
           <h1 className="text-3xl font-black tracking-tight text-[#064E3B]">Emails</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {emailRegistry.length} email{emailRegistry.length !== 1 ? 's' : ''} configured &middot;
-            {' '}{megafoneEmails.length} via Resend &middot; {supabaseEmails.length} via Supabase
+            {emailRegistry.length} emails configured across {sections.length} audiences
           </p>
           <a
             href="/admin/test-emails"
@@ -36,73 +39,46 @@ export default async function AdminEmailsPage() {
           </a>
         </div>
 
-        {/* Megafone emails */}
-        <div>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-            App emails <span className="normal-case tracking-normal font-normal">(sent via Resend from notifications@megafone.app)</span>
-          </h2>
-          <div className="space-y-3">
-            {megafoneEmails.map((email) => (
-              <div key={email.id} className="bg-white rounded-2xl border border-gray-200 px-6 py-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm font-bold text-[#064E3B]">{email.name}</h3>
-                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">
-                    Resend
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 leading-relaxed mb-3">{email.description}</p>
-                <dl className="space-y-2">
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Trigger</dt>
-                    <dd className="text-xs text-gray-600 mt-0.5">{email.trigger}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recipients</dt>
-                    <dd className="text-xs text-gray-600 mt-0.5">{email.recipients}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Source</dt>
-                    <dd className="text-xs text-gray-400 font-mono mt-0.5">{email.source}</dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
-        </div>
+        {sections.map(({ audience, title, subtitle, tagColor }) => {
+          const emails = emailRegistry.filter((e) => e.audience === audience)
+          if (emails.length === 0) return null
 
-        {/* Supabase auth emails */}
-        <div>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-            Auth emails <span className="normal-case tracking-normal font-normal">(managed by Supabase)</span>
-          </h2>
-          <div className="space-y-3">
-            {supabaseEmails.map((email) => (
-              <div key={email.id} className="bg-white rounded-2xl border border-gray-200 px-6 py-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm font-bold text-[#064E3B]">{email.name}</h3>
-                  <span className="text-[10px] font-medium text-blue-700 bg-blue-50 rounded px-1.5 py-0.5">
-                    Supabase
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 leading-relaxed mb-3">{email.description}</p>
-                <dl className="space-y-2">
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Trigger</dt>
-                    <dd className="text-xs text-gray-600 mt-0.5">{email.trigger}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recipients</dt>
-                    <dd className="text-xs text-gray-600 mt-0.5">{email.recipients}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Source</dt>
-                    <dd className="text-xs text-gray-400 font-mono mt-0.5">{email.source}</dd>
-                  </div>
-                </dl>
+          return (
+            <div key={audience}>
+              <div className="mb-3">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{title}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="space-y-3">
+                {emails.map((email) => (
+                  <div key={email.id} className="bg-white rounded-2xl border border-gray-200 px-6 py-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-sm font-bold text-[#064E3B]">{email.name}</h3>
+                      <span className={`text-[10px] font-medium rounded px-1.5 py-0.5 ${tagColor}`}>
+                        {email.sender === 'supabase' ? 'Supabase' : 'Resend'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 leading-relaxed mb-3">{email.description}</p>
+                    <dl className="space-y-2">
+                      <div>
+                        <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Trigger</dt>
+                        <dd className="text-xs text-gray-600 mt-0.5">{email.trigger}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recipients</dt>
+                        <dd className="text-xs text-gray-600 mt-0.5">{email.recipients}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Source</dt>
+                        <dd className="text-xs text-gray-400 font-mono mt-0.5">{email.source}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
 
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
           <p className="text-xs text-gray-400 leading-relaxed">

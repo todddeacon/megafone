@@ -26,7 +26,7 @@ export default async function TestEmailsPage() {
           </p>
         </div>
 
-        <TestEmailButtons />
+        <TestEmailButtons defaultEmail={user.email!} />
 
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4">
           <p className="text-xs text-gray-400 leading-relaxed">
