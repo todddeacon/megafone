@@ -193,6 +193,17 @@ function PostSupportShareScreen({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
 interface Props {
   demandId: string
   isAuthenticated: boolean
@@ -203,6 +214,7 @@ interface Props {
   notificationThreshold: number | null
   headline: string
   orgName: string
+  recentSupporters?: { name: string; created_at: string }[]
 }
 
 export default function SupportButton({
@@ -215,6 +227,7 @@ export default function SupportButton({
   notificationThreshold,
   headline,
   orgName,
+  recentSupporters = [],
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -351,6 +364,22 @@ export default function SupportButton({
           )}
 
         </div>
+
+        {/* Recent supporters */}
+        {recentSupporters.length > 0 && (
+          <div className="px-5 py-3 border-t border-gray-100 bg-white rounded-b-2xl">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Recent supporters</p>
+            <ul className="space-y-1.5">
+              {recentSupporters.map((s, i) => (
+                <li key={i} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 font-medium">{s.name}</span>
+                  <span className="text-[10px] text-gray-400">{timeAgo(s.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
       </div>
     </div>
   )
