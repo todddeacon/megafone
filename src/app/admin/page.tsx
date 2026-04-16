@@ -118,6 +118,7 @@ export default async function AdminPage() {
             { label: 'Comments', value: commentCount ?? 0, href: '/admin/comments' },
             { label: 'Organisations', value: orgCount ?? 0, href: '/admin/organisations' },
             { label: 'Claim requests', value: (allClaims ?? []).length, href: null },
+            { label: 'Tech stack', value: 8, href: '/admin/tech-stack' },
           ].map(({ label, value, href }) => {
             const inner = (
               <>
@@ -164,37 +165,6 @@ export default async function AdminPage() {
 
         <AdminForms organisations={organisations} />
 
-        {/* Tech stack */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Tech stack</h2>
-          </div>
-          <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { name: 'Next.js 16', role: 'Frontend & server framework', url: 'https://nextjs.org' },
-              { name: 'React 19', role: 'UI library', url: 'https://react.dev' },
-              { name: 'Supabase', role: 'Database, auth & storage', url: 'https://supabase.com' },
-              { name: 'Vercel', role: 'Hosting & deployment', url: 'https://vercel.com' },
-              { name: 'Tailwind CSS 4', role: 'Styling', url: 'https://tailwindcss.com' },
-              { name: 'Resend', role: 'Transactional email', url: 'https://resend.com' },
-              { name: 'OpenAI', role: 'Content moderation', url: 'https://openai.com' },
-              { name: 'TypeScript', role: 'Language', url: 'https://typescriptlang.org' },
-            ].map((t) => (
-              <a
-                key={t.name}
-                href={t.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:border-gray-300 hover:shadow-sm transition-all"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-[#064E3B]">{t.name}</p>
-                  <p className="text-xs text-gray-400">{t.role}</p>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
 
       </div>
     </main>
