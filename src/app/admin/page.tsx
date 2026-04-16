@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { emailRegistry } from '@/lib/email-registry'
 import AdminForms from './AdminForms'
 import ClaimRequestsList from './ClaimRequestsList'
 
@@ -118,6 +119,7 @@ export default async function AdminPage() {
             { label: 'Comments', value: commentCount ?? 0, href: '/admin/comments' },
             { label: 'Organisations', value: orgCount ?? 0, href: '/admin/organisations' },
             { label: 'Claim requests', value: (allClaims ?? []).length, href: null },
+            { label: 'Emails', value: emailRegistry.length, href: '/admin/emails' },
             { label: 'Tech stack', value: 8, href: '/admin/tech-stack' },
           ].map(({ label, value, href }) => {
             const inner = (
