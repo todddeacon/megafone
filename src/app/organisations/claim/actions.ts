@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { autoAssignOrgRep } from '@/lib/auto-org-rep'
 
 export type ClaimState = { error: string | null; success?: boolean }
 
@@ -71,6 +72,9 @@ export async function signUpAndClaim(
   if (data.user) {
     const admin = createAdminClient()
     await admin.from('profiles').insert({ id: data.user.id, name: requester_name, nickname: null })
+
+    // Auto-assign org rep if email matches a notification contact
+    await autoAssignOrgRep(data.user.id, email)
 
     // Submit the claim request
     await admin.from('claim_requests').insert({

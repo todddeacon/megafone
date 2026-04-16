@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { autoAssignOrgRep } from '@/lib/auto-org-rep'
 
 export async function signInWithProvider(formData: FormData): Promise<void> {
   const provider = formData.get('provider') as string
@@ -97,6 +98,7 @@ export async function signUp(
   if (data.user) {
     const admin = createAdminClient()
     await admin.from('profiles').insert({ id: data.user.id, name, nickname })
+    await autoAssignOrgRep(data.user.id, email)
   }
 
   redirect(returnTo)
