@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 interface Props {
   name: string
   email: string
+  isAdmin?: boolean
 }
 
 function initials(name: string) {
@@ -16,7 +17,7 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function NavBarDropdown({ name, email }: Props) {
+export default function NavBarDropdown({ name, email, isAdmin }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -58,6 +59,15 @@ export default function NavBarDropdown({ name, email }: Props) {
             >
               Edit profile
             </a>
+            {isAdmin && (
+              <a
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Admin
+              </a>
+            )}
           </div>
 
           <div className="border-t border-gray-100 py-1">

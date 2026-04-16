@@ -32,6 +32,7 @@ export default async function NavBar() {
             <NavBarDropdown
               name={profile?.name ?? user.email ?? 'Account'}
               email={user.email ?? ''}
+              isAdmin={user.email === process.env.ADMIN_EMAIL}
             />
           ) : (
             <a
