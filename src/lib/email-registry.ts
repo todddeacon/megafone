@@ -128,6 +128,26 @@ export const emailRegistry: EmailDefinition[] = [
   // ── Organisation emails ───────────────────────────────────────
 
   {
+    id: 'org-welcome',
+    name: 'What is Megafone?',
+    description: 'Explains what Megafone is, how it works, and how the organisation can respond. Sent alongside the first threshold notification.',
+    trigger: 'A campaign reaches its notification threshold (sent alongside threshold email).',
+    recipients: 'Organisation notification emails (configured in admin)',
+    sender: 'megafone',
+    audience: 'organisations',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand() (threshold crossed)',
+  },
+  {
+    id: 'org-creator-update',
+    name: 'Creator posted an update (to org)',
+    description: 'Notifies the organisation when the campaign creator posts an update or adds content, for campaigns that have already been sent to the org.',
+    trigger: 'The campaign creator posts an update or adds content on a campaign that has crossed the threshold.',
+    recipients: 'Organisation notification emails (configured in admin)',
+    sender: 'megafone',
+    audience: 'organisations',
+    source: 'src/app/demands/[id]/actions.ts → addCreatorUpdate() / addDemandLink()',
+  },
+  {
     id: 'threshold',
     name: 'Campaign threshold reached',
     description: 'Notifies the organisation that a campaign has reached its supporter target. Includes the campaign headline, supporter count, and all questions.',

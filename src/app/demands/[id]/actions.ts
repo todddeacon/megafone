@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail, sendCreatorFirstSupporterEmail, sendCreatorMilestoneEmail, sendCreatorTargetReachedEmail, sendCreatorResponseReceivedEmail } from '@/lib/email'
+import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail, sendCreatorFirstSupporterEmail, sendCreatorMilestoneEmail, sendCreatorTargetReachedEmail, sendCreatorResponseReceivedEmail, sendOrgWelcomeEmail, sendOrgCreatorUpdateEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 
@@ -175,6 +175,16 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
           supportCount: newCount,
           threshold: demand.notification_threshold,
           summary: demand.summary ?? '',
+          questions: questions?.map((q) => q.body) ?? [],
+        })
+
+        // Org welcome email: explains what Megafone is
+        await sendOrgWelcomeEmail({
+          to: emails,
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+          supportCount: newCount,
           questions: questions?.map((q) => q.body) ?? [],
         })
 
@@ -365,7 +375,7 @@ export async function addCreatorUpdate(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('creator_user_id, headline')
+    .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
     .single()
 
@@ -413,6 +423,27 @@ export async function addCreatorUpdate(
     }
   }
 
+  // Notify org of the update (only if campaign already sent to them)
+  if (demand.threshold_notified_at) {
+    const adminClient = createAdminClient()
+    const [{ data: org }, { data: notifEmails }] = await Promise.all([
+      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+      adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+    ])
+    const orgEmails = notifEmails?.map((e) => e.email) ?? []
+    if (org && orgEmails.length > 0) {
+      await sendOrgCreatorUpdateEmail({
+        to: orgEmails,
+        orgName: org.name,
+        demandHeadline: demand.headline,
+        demandId,
+        supportCount: demand.support_count_cache ?? 0,
+        updateBody: body,
+        hasVideo: false,
+      })
+    }
+  }
+
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
   return { error: null }
@@ -433,7 +464,7 @@ export async function addDemandLink(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('creator_user_id, headline')
+    .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
     .single()
 
@@ -473,6 +504,27 @@ export async function addDemandLink(
         creatorName: creatorProfile?.name ?? 'The campaign creator',
         demandHeadline: demand.headline,
         demandId,
+        updateBody: null,
+        hasVideo: true,
+      })
+    }
+  }
+
+  // Notify org of the content (only if campaign already sent to them)
+  if (demand.threshold_notified_at) {
+    const adminClient = createAdminClient()
+    const [{ data: org }, { data: notifEmails }] = await Promise.all([
+      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+      adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+    ])
+    const orgEmails = notifEmails?.map((e) => e.email) ?? []
+    if (org && orgEmails.length > 0) {
+      await sendOrgCreatorUpdateEmail({
+        to: orgEmails,
+        orgName: org.name,
+        demandHeadline: demand.headline,
+        demandId,
+        supportCount: demand.support_count_cache ?? 0,
         updateBody: null,
         hasVideo: true,
       })

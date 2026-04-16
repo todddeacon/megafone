@@ -795,6 +795,176 @@ export async function sendCreatorUpdateEmail({
   await sendBatch(apiKey, to, `New update by ${creatorName}`, html)
 }
 
+// ── Org Email: Welcome to Megafone ───────────────────────────────────────────
+
+interface OrgWelcomeParams {
+  to: string[]
+  orgName: string
+  demandHeadline: string
+  demandId: string
+  supportCount: number
+  questions: string[]
+}
+
+export async function sendOrgWelcomeEmail({
+  to,
+  orgName,
+  demandHeadline,
+  demandId,
+  supportCount,
+  questions,
+}: OrgWelcomeParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  const questionsHtml = questions
+    .map(
+      (q, i) => `
+      <tr>
+        <td style="padding: 10px 0; border-bottom: 1px solid #f0fdf4; vertical-align: top;">
+          <span style="color: #f59e0b; font-weight: 700; margin-right: 10px;">${i + 1}.</span>
+          <span style="color: #1f2937;">${escapeHtml(q)}</span>
+        </td>
+      </tr>`
+    )
+    .join('')
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      What is Megafone?
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      Fans are asking ${escapeHtml(orgName)} a question
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Megafone is a platform that gives fans a structured way to ask questions and build support around the issues that matter to them.
+    </p>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong> have come together to ask ${escapeHtml(orgName)} the following question${questions.length !== 1 ? 's' : ''}:
+    </p>
+
+    <div style="background-color: #f0fdf4; border-left: 4px solid #064e3b; border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 16px; font-weight: 700; color: #064e3b; line-height: 1.4;">
+        ${escapeHtml(demandHeadline)}
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0fdf4; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+      <tbody>
+        ${questionsHtml}
+      </tbody>
+    </table>
+
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      How does it work?
+    </p>
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Fans create campaigns, others support them, and when enough people get behind a question, it's sent to the organisation. You now have an opportunity to respond.
+    </p>
+
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      How can ${escapeHtml(orgName)} take part?
+    </p>
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Responding is optional — but fans will be able to see whether a response has been received. Organisations that engage with their supporters build trust and strengthen their community.
+    </p>
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      To respond, visit the campaign page and post your official response. You can reply with text, upload a PDF, or share a video.
+    </p>
+
+    ${ctaButton(campaignUrl, 'View the campaign and respond →')}
+
+    <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+      If you have questions about Megafone or need help responding, email us at
+      <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.
+    </p>`
+
+  const html = emailShell(
+    `What is Megafone?`,
+    body,
+    `You received this because fans tagged ${escapeHtml(orgName)} in a campaign on Megafone. To update your contact details or query this notification, email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
+  )
+
+  await sendBatch(apiKey, to, 'What is Megafone?', html)
+}
+
+// ── Org Email: Creator posted an update ──────────────────────────────────────
+
+interface OrgCreatorUpdateParams {
+  to: string[]
+  orgName: string
+  demandHeadline: string
+  demandId: string
+  supportCount: number
+  updateBody: string | null
+  hasVideo: boolean
+}
+
+export async function sendOrgCreatorUpdateEmail({
+  to,
+  orgName,
+  demandHeadline,
+  demandId,
+  supportCount,
+  updateBody,
+  hasVideo,
+}: OrgCreatorUpdateParams): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
+  const campaignUrl = `${siteUrl}/demands/${demandId}`
+
+  let snippetHtml = ''
+  if (updateBody) {
+    const snippet = updateBody.length > 300 ? updateBody.slice(0, 300) + '…' : updateBody
+    snippetHtml = `
+      <p style="margin: 0 0 28px 0; font-size: 15px; color: #4b5563; line-height: 1.6; border-left: 3px solid #d1fae5; padding-left: 16px; font-style: italic;">
+        &ldquo;${escapeHtml(snippet)}&rdquo;
+      </p>`
+  } else if (hasVideo) {
+    snippetHtml = `
+      <p style="margin: 0 0 28px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+        The creator has shared new content with their supporters. View it on the campaign page.
+      </p>`
+  }
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Campaign update
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(demandHeadline)}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      The creator of a campaign directed at ${escapeHtml(orgName)} has posted a new update for their supporters.
+    </p>
+
+    ${snippetHtml}
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      This campaign currently has <strong style="color: #064e3b;">${supportCount.toLocaleString()} supporters</strong>. Staying engaged with your fan community shows you're listening.
+    </p>
+
+    ${ctaButton(campaignUrl, 'View the campaign →')}`
+
+  const html = emailShell(
+    `Campaign update — ${escapeHtml(demandHeadline)}`,
+    body,
+    `You received this because fans tagged ${escapeHtml(orgName)} in a campaign on Megafone. To update your contact details or query this notification, email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
+  )
+
+  await sendBatch(apiKey, to, `Campaign update — ${demandHeadline}`, html)
+}
+
 // ── Creator Email 1: First supporter ─────────────────────────────────────────
 
 interface CreatorFirstSupporterParams {

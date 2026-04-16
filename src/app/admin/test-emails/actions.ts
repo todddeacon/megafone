@@ -14,6 +14,8 @@ import {
   sendCreatorTargetReachedEmail,
   sendCreatorResponseReceivedEmail,
   sendCreatorWeeklyDigestEmail,
+  sendOrgWelcomeEmail,
+  sendOrgCreatorUpdateEmail,
 } from '@/lib/email'
 
 function isAdmin(email: string) {
@@ -135,6 +137,33 @@ export async function sendTestEmail(
           responseBody: 'Thank you for raising this question. We understand the concern around pricing and want to be transparent. The increase reflects rising operational costs, including the new stadium maintenance programme. We are committed to keeping football accessible and will be introducing a new concession scheme for under-25s and over-65s.',
           hasPdf: false,
           supportCount,
+        })
+        break
+
+      case 'org-welcome':
+        await sendOrgWelcomeEmail({
+          to: [to],
+          orgName,
+          demandHeadline,
+          demandId,
+          supportCount,
+          questions: [
+            'What specifically is driving the 15% increase?',
+            'How does this compare to other Premier League clubs?',
+            'Will any of this revenue be ring-fenced for player recruitment?',
+          ],
+        })
+        break
+
+      case 'org-creator-update':
+        await sendOrgCreatorUpdateEmail({
+          to: [to],
+          orgName,
+          demandHeadline,
+          demandId,
+          supportCount,
+          updateBody: 'Just had a meeting with fellow season ticket holders. We now have supporters from all sections of the ground. The club can\'t ignore this many voices.',
+          hasVideo: false,
         })
         break
 

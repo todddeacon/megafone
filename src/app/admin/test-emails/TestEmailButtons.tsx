@@ -36,6 +36,8 @@ const sections: { title: string; emails: EmailItem[] }[] = [
   {
     title: 'Organisation emails',
     emails: [
+      { id: 'org-welcome', name: 'What is Megafone?', description: 'Explains Megafone to org on first notification', tag: 'new' },
+      { id: 'org-creator-update', name: 'Creator update (to org)', description: 'Sent to org when creator posts update', tag: 'new' },
       { id: 'threshold', name: 'Threshold reached', description: 'Sent to the organisation when target hit', tag: 'existing' },
       { id: 'followup', name: 'Follow-up questions', description: 'Sent to the organisation with follow-ups', tag: 'existing' },
     ],
