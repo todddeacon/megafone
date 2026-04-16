@@ -53,6 +53,13 @@ export default function NavBarDropdown({ name, email, isAdmin }: Props) {
           {/* Actions */}
           <div className="py-1">
             <a
+              href="/my-campaigns"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              My campaigns
+            </a>
+            <a
               href="/profile"
               onClick={() => setOpen(false)}
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
