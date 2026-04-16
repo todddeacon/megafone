@@ -765,7 +765,7 @@ export async function sendCreatorUpdateEmail({
   } else if (hasVideo) {
     snippetHtml = `
       <p style="margin: 0 0 28px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
-        The creator has shared new video content. View it on the campaign page.
+        ${escapeHtml(creatorName)} has shared new video content. View it on the campaign page.
       </p>`
   }
 
