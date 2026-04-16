@@ -278,6 +278,8 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               supportCount={demand.support_count_cache}
               questionCount={allQuestions.length}
               notificationThreshold={demand.notification_threshold ?? null}
+              headline={demand.headline}
+              orgName={orgName}
             />
 
             {/* Campaign progress */}
