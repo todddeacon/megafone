@@ -1,7 +1,20 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import AdminForms from './AdminForms'
 import ClaimRequestsList from './ClaimRequestsList'
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -20,6 +33,8 @@ export default async function AdminPage() {
     )
   }
 
+  const admin = createAdminClient()
+
   const { data: orgNames } = await supabase
     .from('organisations')
     .select('id, name')
@@ -32,21 +47,58 @@ export default async function AdminPage() {
     { count: userCount },
     { count: campaignCount },
     { count: supportCount },
-    { count: claimedOrgCount },
+    { count: orgCount },
+    { count: commentCount },
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('demands').select('*', { count: 'exact', head: true }),
     supabase.from('supports').select('*', { count: 'exact', head: true }),
-    supabase.from('organisations').select('*', { count: 'exact', head: true }).eq('is_claimed', true),
+    supabase.from('organisations').select('*', { count: 'exact', head: true }),
+    supabase.from('comments').select('*', { count: 'exact', head: true }),
   ])
 
-  const { data: allClaims } = await supabase
+  // Recent activity — last 20 items across supports, comments, and new campaigns
+  const [
+    { data: recentSupports },
+    { data: recentComments },
+    { data: recentCampaigns },
+  ] = await Promise.all([
+    admin.from('supports').select('created_at, demand_id').order('created_at', { ascending: false }).limit(10),
+    admin.from('comments').select('created_at, demand_id, body').order('created_at', { ascending: false }).limit(10),
+    admin.from('demands').select('created_at, id, headline').order('created_at', { ascending: false }).limit(10),
+  ])
+
+  // Build unified activity feed
+  type ActivityItem = { type: string; time: string; label: string; href: string }
+  const activity: ActivityItem[] = []
+
+  for (const s of recentSupports ?? []) {
+    activity.push({ type: 'support', time: s.created_at, label: 'New supporter', href: `/demands/${s.demand_id}` })
+  }
+  for (const c of recentComments ?? []) {
+    const snippet = c.body.length > 60 ? c.body.slice(0, 60) + '...' : c.body
+    activity.push({ type: 'comment', time: c.created_at, label: snippet, href: `/demands/${c.demand_id}` })
+  }
+  for (const d of recentCampaigns ?? []) {
+    activity.push({ type: 'campaign', time: d.created_at, label: d.headline, href: `/demands/${d.id}` })
+  }
+
+  activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+  const recentActivity = activity.slice(0, 15)
+
+  const { data: allClaims } = await admin
     .from('claim_requests')
     .select('id, requester_name, requester_email, requester_role, status, created_at, organisation_other, organisation:organisations(name)')
     .order('created_at', { ascending: false })
 
   const pendingClaims = (allClaims ?? []).filter((c) => c.status === 'pending')
   const reviewedClaims = (allClaims ?? []).filter((c) => c.status !== 'pending')
+
+  const typeIcon: Record<string, string> = {
+    support: '👍',
+    comment: '💬',
+    campaign: '📢',
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
@@ -58,12 +110,14 @@ export default async function AdminPage() {
         </div>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { label: 'Users', value: userCount ?? 0, href: null },
+            { label: 'Users', value: userCount ?? 0, href: '/admin/users' },
             { label: 'Campaigns', value: campaignCount ?? 0, href: '/admin/campaigns' },
             { label: 'Supports', value: supportCount ?? 0, href: null },
-            { label: 'Claimed orgs', value: claimedOrgCount ?? 0, href: '/admin/org-emails' },
+            { label: 'Comments', value: commentCount ?? 0, href: '/admin/comments' },
+            { label: 'Organisations', value: orgCount ?? 0, href: '/admin/organisations' },
+            { label: 'Claim requests', value: (allClaims ?? []).length, href: null },
           ].map(({ label, value, href }) => {
             const inner = (
               <>
@@ -82,6 +136,26 @@ export default async function AdminPage() {
             )
           })}
         </div>
+
+        {/* Recent activity feed */}
+        {recentActivity.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Recent activity</h2>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {recentActivity.map((item, i) => (
+                <li key={i}>
+                  <a href={item.href} className="flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
+                    <span className="text-sm">{typeIcon[item.type] ?? '·'}</span>
+                    <span className="text-sm text-gray-700 truncate flex-1">{item.label}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{timeAgo(item.time)}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <ClaimRequestsList
           pendingClaims={pendingClaims as unknown as Parameters<typeof ClaimRequestsList>[0]['pendingClaims']}
