@@ -216,6 +216,21 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               />
             )}
 
+            {/* Mobile-only support panel — shown after questions */}
+            <div className="lg:hidden">
+              <SupportButton
+                demandId={id}
+                isAuthenticated={!!user}
+                isEmailVerified={!!user?.email_confirmed_at}
+                isSupported={isSupporter}
+                supportCount={demand.support_count_cache}
+                questionCount={allQuestions.length}
+                notificationThreshold={demand.notification_threshold ?? null}
+                headline={demand.headline}
+                orgName={orgName}
+              />
+            </div>
+
             {/* Creator: add follow-up questions + notify org */}
             {isCreator && (demand.status === 'responded' || demand.status === 'further_questions') && (
               <FollowUpCreatorTools
@@ -269,7 +284,8 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
           {/* ── Right column: sticky sidebar ── */}
           <div className="lg:sticky lg:top-6 space-y-4">
 
-            {/* Support panel */}
+            {/* Support panel — hidden on mobile (shown inline after questions instead) */}
+            <div className="hidden lg:block">
             <SupportButton
               demandId={id}
               isAuthenticated={!!user}
@@ -281,6 +297,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               headline={demand.headline}
               orgName={orgName}
             />
+            </div>
 
             {/* Campaign progress */}
             <CampaignStatus
