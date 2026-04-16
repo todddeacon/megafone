@@ -125,7 +125,7 @@ export async function sendThresholdEmail({
               <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.6;">
                 You received this because fans tagged ${escapeHtml(orgName)} in a campaign on Megafone.
                 To update your contact details or query this notification, email
-                <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.
+                <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.
               </p>
             </td>
           </tr>
@@ -271,7 +271,7 @@ export async function sendResponseEmail({
             <td style="background-color: #f3f4f6; border-radius: 0 0 12px 12px; padding: 20px 40px; border: 1px solid #e5e7eb; border-top: none;">
               <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.6;">
                 You received this because you supported this campaign on Megafone.
-                Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.
+                Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.
               </p>
             </td>
           </tr>
@@ -423,7 +423,7 @@ export async function sendFollowUpEmail({
             <td style="background-color: #f3f4f6; border-radius: 0 0 12px 12px; padding: 20px 40px; border: 1px solid #e5e7eb; border-top: none;">
               <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.6;">
                 You received this because fans tagged ${escapeHtml(orgName)} in a campaign on Megafone.
-                Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.
+                Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.
               </p>
             </td>
           </tr>
@@ -598,7 +598,7 @@ export async function sendWelcomeSupporterEmail({
   const html = emailShell(
     `You're supporting ${escapeHtml(creatorName)}'s campaign on Megafone`,
     body,
-    `You received this because you supported a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+    `You received this because you supported a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
   )
 
   await sendSingle(apiKey, to, `You're supporting ${creatorName}'s campaign on Megafone`, html)
@@ -654,7 +654,7 @@ export async function sendCampaignSentEmail({
   const html = emailShell(
     `Your campaign has been sent to ${escapeHtml(orgName)}`,
     body,
-    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
   )
 
   await sendBatch(apiKey, to, `Your campaign has been sent to ${orgName}`, html)
@@ -727,7 +727,7 @@ export async function sendCampaignResolvedEmail({
   const html = emailShell(
     `Campaign outcome: ${escapeHtml(demandHeadline)}`,
     body,
-    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
   )
 
   await sendBatch(apiKey, to, `Campaign outcome: ${demandHeadline}`, html)
@@ -795,7 +795,7 @@ export async function sendCreatorUpdateEmail({
   const html = emailShell(
     `New update by ${escapeHtml(creatorName)}`,
     body,
-    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.co" style="color: #064e3b;">hello@megafone.co</a>.`
+    `You received this because you supported this campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
   )
 
   await sendBatch(apiKey, to, `New update by ${creatorName}`, html)

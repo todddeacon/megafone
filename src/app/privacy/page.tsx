@@ -20,7 +20,7 @@ export default function PrivacyPage() {
             <p>
               Megafone is built on the idea that fans deserve to be heard. That means we take the
               privacy of your personal information seriously. This Privacy Policy explains what data
-              we collect, why we collect it, and how we handle it when you use megafone.co
+              we collect, why we collect it, and how we handle it when you use megafone.app
               (&ldquo;the Platform&rdquo;).
             </p>
             <p className="mt-3">
@@ -162,8 +162,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-3">
               To exercise any of these rights, contact us at{' '}
-              <a href="mailto:hello@megafone.co" className="text-[#F59E0B] hover:underline">
-                hello@megafone.co
+              <a href="mailto:hello@megafone.app" className="text-[#F59E0B] hover:underline">
+                hello@megafone.app
               </a>
               . We will respond within a reasonable timeframe.
             </p>
@@ -184,8 +184,8 @@ export default function PrivacyPage() {
             <p>
               If you have questions or concerns about this Privacy Policy or how your data is
               handled, please get in touch at{' '}
-              <a href="mailto:hello@megafone.co" className="text-[#F59E0B] hover:underline">
-                hello@megafone.co
+              <a href="mailto:hello@megafone.app" className="text-[#F59E0B] hover:underline">
+                hello@megafone.app
               </a>
               .
             </p>

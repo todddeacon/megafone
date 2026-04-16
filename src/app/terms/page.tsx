@@ -20,7 +20,7 @@ export default function TermsPage() {
             <p>
               Welcome to Megafone. We&apos;re a platform that helps fans ask questions and hold
               organisations accountable. These Terms of Service (&ldquo;Terms&rdquo;) govern your use
-              of megafone.co and any associated services (&ldquo;the Platform&rdquo;). Please read
+              of megafone.app and any associated services (&ldquo;the Platform&rdquo;). Please read
               them carefully before using Megafone.
             </p>
           </section>
@@ -161,8 +161,8 @@ export default function TermsPage() {
             <p>
               If you have questions about these Terms or want to report content that violates them,
               please contact us at{' '}
-              <a href="mailto:hello@megafone.co" className="text-[#F59E0B] hover:underline">
-                hello@megafone.co
+              <a href="mailto:hello@megafone.app" className="text-[#F59E0B] hover:underline">
+                hello@megafone.app
               </a>
               .
             </p>
