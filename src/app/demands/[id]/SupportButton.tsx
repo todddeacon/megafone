@@ -51,9 +51,8 @@ function SharePanel({
   orgName: string
 }) {
   const [copied, setCopied] = useState(false)
-  const url = typeof window !== 'undefined'
-    ? `${window.location.origin}/demands/${demandId}`
-    : `/demands/${demandId}`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  const url = `${siteUrl}/demands/${demandId}`
 
   const shareText = `I just supported a campaign asking ${orgName} to answer fans' questions on Megafone. Join ${supportCount.toLocaleString()} supporters: ${url}`
   const shareTextEncoded = encodeURIComponent(shareText)
