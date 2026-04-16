@@ -31,7 +31,7 @@ export async function createDemand(
   if (!organisation_id) return { error: 'Target organisation is required.' }
   if (!summary) return { error: 'Summary is required.' }
   if (questions.length === 0) return { error: 'At least one question is required.' }
-  if (!notification_threshold || notification_threshold < 1) return { error: 'Supporter target is required.' }
+  if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
 
   // Profanity check (runs first, no API call needed)
   const textToCheck = [headline, summary, ...questions].join('\n')

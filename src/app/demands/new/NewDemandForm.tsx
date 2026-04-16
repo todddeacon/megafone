@@ -405,14 +405,14 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
             name="notification_threshold"
             type="number"
             required
-            min={1}
+            min={100}
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
             placeholder="e.g. 500"
             className={inputClass}
           />
           <p className="mt-1 text-xs text-gray-400">
-            The number of supporters needed before the organisation is notified.
+            Minimum 100. The number of supporters needed before the organisation is notified.
           </p>
         </div>
 

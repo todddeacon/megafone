@@ -37,7 +37,7 @@ export async function updateDemand(
   if (!organisation_id) return { error: 'Target organisation is required.' }
   if (!summary) return { error: 'Summary is required.' }
   if (questions.length === 0) return { error: 'At least one question is required.' }
-  if (!notification_threshold || notification_threshold < 1) return { error: 'Supporter target is required.' }
+  if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
 
   // Content moderation
   const textToCheck = `${headline}\n${summary}\n${questions.join('\n')}`

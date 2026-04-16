@@ -151,13 +151,13 @@ export default function EditDemandForm({ demandId, organisations, initial }: Pro
           name="notification_threshold"
           type="number"
           required
-          min={1}
+          min={100}
           defaultValue={initial.notification_threshold ?? undefined}
           placeholder="e.g. 500"
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
         />
         <p className="mt-1 text-xs text-gray-400">
-          The number of supporters you want to reach before the organisation is notified.
+          Minimum 100. The number of supporters you want to reach before the organisation is notified.
         </p>
       </div>
 
