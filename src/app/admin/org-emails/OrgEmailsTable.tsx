@@ -23,18 +23,22 @@ function EmailChip({ entry, orgId }: { entry: NotificationEmail; orgId: string }
 
   return (
     <div className="flex items-center gap-2 py-1.5 group">
-      <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="text-sm text-gray-800 truncate">{entry.email}</span>
-        {entry.label && (
-          <span className="text-xs text-gray-400 truncate">{entry.label}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-800 truncate">{entry.email}</span>
+          <span className={`shrink-0 text-xs rounded px-1.5 py-0.5 font-medium ${
+            isOrgRep
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-gray-100 text-gray-500'
+          }`}>
+            {isOrgRep ? 'Claimed rep' : 'Manual'}
+          </span>
+        </div>
+        {(entry.label || entry.title) && (
+          <p className="text-xs text-gray-400 mt-0.5 truncate">
+            {entry.label}{entry.label && entry.title ? ' · ' : ''}{entry.title}
+          </p>
         )}
-        <span className={`shrink-0 text-xs rounded px-1.5 py-0.5 font-medium ${
-          isOrgRep
-            ? 'bg-emerald-50 text-emerald-700'
-            : 'bg-gray-100 text-gray-500'
-        }`}>
-          {isOrgRep ? 'Claimed rep' : 'Manual'}
-        </span>
       </div>
 
       {!confirmRemove ? (
@@ -85,18 +89,24 @@ function AddEmailForm({ orgId, onSuccess }: { orgId: string; onSuccess: () => vo
       <input type="hidden" name="organisation_id" value={orgId} />
       <div className="flex-1 space-y-1.5">
         <input
+          name="label"
+          type="text"
+          placeholder="Contact name (optional)"
+          autoFocus
+          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+        />
+        <input
+          name="title"
+          type="text"
+          placeholder="Job title (optional — e.g. Head of Media)"
+          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+        />
+        <input
           name="email"
           type="email"
           required
           placeholder="Email address"
-          autoFocus
           className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
-        />
-        <input
-          name="label"
-          type="text"
-          placeholder="Label (optional — e.g. Press office)"
-          className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
         />
         {state.error && <p className="text-xs text-red-500">{state.error}</p>}
       </div>

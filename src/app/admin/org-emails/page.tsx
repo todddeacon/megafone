@@ -6,6 +6,7 @@ export interface NotificationEmail {
   id: string
   email: string
   label: string | null
+  title: string | null
   source: string
   created_at: string
 }
@@ -30,14 +31,14 @@ export default async function OrgEmailsPage() {
 
   const { data: allEmails } = await supabase
     .from('organisation_notification_emails')
-    .select('id, organisation_id, email, label, source, created_at')
+    .select('id, organisation_id, email, label, title, source, created_at')
     .order('created_at', { ascending: true })
 
   // Group emails by organisation
   const emailsByOrg = new Map<string, NotificationEmail[]>()
   for (const e of allEmails ?? []) {
     const list = emailsByOrg.get(e.organisation_id) ?? []
-    list.push({ id: e.id, email: e.email, label: e.label, source: e.source, created_at: e.created_at })
+    list.push({ id: e.id, email: e.email, label: e.label, title: e.title, source: e.source, created_at: e.created_at })
     emailsByOrg.set(e.organisation_id, list)
   }
 

@@ -108,6 +108,7 @@ export async function addOrgNotificationEmail(
   const organisation_id = formData.get('organisation_id') as string
   const email = (formData.get('email') as string)?.trim().toLowerCase()
   const label = (formData.get('label') as string)?.trim() || null
+  const title = (formData.get('title') as string)?.trim() || null
 
   if (!organisation_id) return { error: 'Organisation is required.' }
   if (!email) return { error: 'Email is required.' }
@@ -118,7 +119,7 @@ export async function addOrgNotificationEmail(
   const admin = createAdminClient()
   const { error: insertError } = await admin
     .from('organisation_notification_emails')
-    .insert({ organisation_id, email, label, source: 'manual' })
+    .insert({ organisation_id, email, label, title, source: 'manual' })
 
   if (insertError) {
     if (insertError.code === '23505') return { error: 'That email is already on the list for this organisation.' }

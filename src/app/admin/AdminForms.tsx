@@ -167,23 +167,34 @@ function OrgContactEmailForm({ organisations }: { organisations: Org[] }) {
           <input type="hidden" name="organisation_id" value={selectedId} />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Email address</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Contact name <span className="font-normal text-gray-400">(optional)</span>
+          </label>
           <input
-            name="email"
-            type="email"
-            required
-            placeholder="notifications@club.co.uk"
+            name="label"
+            type="text"
+            placeholder="e.g. John Smith"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
           />
         </div>
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Label <span className="font-normal text-gray-400">(optional)</span>
+            Job title <span className="font-normal text-gray-400">(optional)</span>
           </label>
           <input
-            name="label"
+            name="title"
             type="text"
-            placeholder="e.g. Press office"
+            placeholder="e.g. Head of Media"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Email address</label>
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="media@club.co.uk"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
           />
         </div>
