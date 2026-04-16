@@ -1,8 +1,44 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supportDemand } from './actions'
+
+// ── Fade-cycling recent supporters ──────────────────────────────────────────
+
+function RecentSupportersCycle({ supporters }: { supporters: { name: string; created_at: string }[] }) {
+  const [index, setIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    if (supporters.length <= 1) return
+
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setIndex((i) => (i + 1) % supporters.length)
+        setVisible(true)
+      }, 400) // fade out duration
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [supporters.length])
+
+  const current = supporters[index]
+
+  return (
+    <div className="px-5 py-3 border-t border-gray-100 bg-white rounded-b-2xl">
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Recent supporters</p>
+      <div
+        className="flex items-center justify-between transition-opacity duration-400"
+        style={{ opacity: visible ? 1 : 0 }}
+      >
+        <span className="text-xs text-gray-600 font-medium">{current.name}</span>
+        <span className="text-[10px] text-gray-400">{timeAgo(current.created_at)}</span>
+      </div>
+    </div>
+  )
+}
 
 function SignInModal({ onClose }: { onClose: () => void }) {
   const pathname = usePathname()
@@ -365,19 +401,9 @@ export default function SupportButton({
 
         </div>
 
-        {/* Recent supporters */}
+        {/* Recent supporters — fade cycle */}
         {recentSupporters.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 bg-white rounded-b-2xl">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Recent supporters</p>
-            <ul className="space-y-1.5">
-              {recentSupporters.map((s, i) => (
-                <li key={i} className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600 font-medium">{s.name}</span>
-                  <span className="text-[10px] text-gray-400">{timeAgo(s.created_at)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RecentSupportersCycle supporters={recentSupporters} />
         )}
 
       </div>
