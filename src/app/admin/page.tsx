@@ -119,6 +119,7 @@ export default async function AdminPage() {
             { label: 'Comments', value: commentCount ?? 0, href: '/admin/comments' },
             { label: 'Organisations', value: orgCount ?? 0, href: '/admin/organisations' },
             { label: 'Claim requests', value: (allClaims ?? []).length, href: null },
+            { label: 'Activity', value: recentActivity.length, href: '/admin/activity' },
             { label: 'Emails', value: emailRegistry.length, href: '/admin/emails' },
             { label: 'Tech stack', value: 8, href: '/admin/tech-stack' },
           ].map(({ label, value, href }) => {
@@ -139,26 +140,6 @@ export default async function AdminPage() {
             )
           })}
         </div>
-
-        {/* Recent activity feed */}
-        {recentActivity.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Recent activity</h2>
-            </div>
-            <ul className="divide-y divide-gray-100">
-              {recentActivity.map((item, i) => (
-                <li key={i}>
-                  <a href={item.href} className="flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
-                    <span className="text-sm">{typeIcon[item.type] ?? '·'}</span>
-                    <span className="text-sm text-gray-700 truncate flex-1">{item.label}</span>
-                    <span className="text-xs text-gray-400 shrink-0">{timeAgo(item.time)}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <ClaimRequestsList
           pendingClaims={pendingClaims as unknown as Parameters<typeof ClaimRequestsList>[0]['pendingClaims']}
