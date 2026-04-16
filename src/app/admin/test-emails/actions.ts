@@ -115,6 +115,7 @@ export async function sendTestEmail(
         await sendThresholdEmail({
           to: [to],
           orgName,
+          orgSlug: 'everton',
           demandHeadline,
           demandId,
           supportCount,
@@ -144,6 +145,7 @@ export async function sendTestEmail(
         await sendOrgWelcomeEmail({
           to: [to],
           orgName,
+          orgSlug: 'everton',
           demandHeadline,
           demandId,
           supportCount,

@@ -141,7 +141,7 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
     const [{ data: org }, { data: questions }, { data: notifEmails }] = await Promise.all([
       supabase
         .from('organisations')
-        .select('name')
+        .select('name, slug')
         .eq('id', demand.organisation_id)
         .single(),
       supabase
@@ -170,6 +170,7 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
         await sendThresholdEmail({
           to: emails,
           orgName: org.name,
+          orgSlug: org.slug,
           demandHeadline: demand.headline,
           demandId,
           supportCount: newCount,
@@ -182,6 +183,7 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
         await sendOrgWelcomeEmail({
           to: emails,
           orgName: org.name,
+          orgSlug: org.slug,
           demandHeadline: demand.headline,
           demandId,
           supportCount: newCount,

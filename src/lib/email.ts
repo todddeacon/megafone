@@ -1,6 +1,7 @@
 interface ThresholdEmailParams {
   to: string[]
   orgName: string
+  orgSlug: string
   demandHeadline: string
   demandId: string
   supportCount: number
@@ -12,6 +13,7 @@ interface ThresholdEmailParams {
 export async function sendThresholdEmail({
   to,
   orgName,
+  orgSlug,
   demandHeadline,
   demandId,
   supportCount,
@@ -106,8 +108,12 @@ export async function sendThresholdEmail({
                 </tr>
               </table>
 
-              <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
                 Megafone gives fans a structured way to ask questions and build support. Responding to this campaign is optional — but fans will be able to see whether a response has been received.
+              </p>
+
+              <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+                Want to respond? <a href="${siteUrl}/organisations/claim?org=${orgSlug}" style="color: #064e3b; font-weight: 600;">Claim your organisation</a> on Megafone to post an official response.
               </p>
 
             </td>
@@ -800,6 +806,7 @@ export async function sendCreatorUpdateEmail({
 interface OrgWelcomeParams {
   to: string[]
   orgName: string
+  orgSlug: string
   demandHeadline: string
   demandId: string
   supportCount: number
@@ -809,6 +816,7 @@ interface OrgWelcomeParams {
 export async function sendOrgWelcomeEmail({
   to,
   orgName,
+  orgSlug,
   demandHeadline,
   demandId,
   supportCount,
@@ -879,6 +887,10 @@ export async function sendOrgWelcomeEmail({
     </p>
 
     ${ctaButton(campaignUrl, 'View the campaign and respond →')}
+
+    <p style="margin: 0 0 16px 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+      To manage responses to your fans on Megafone, <a href="${siteUrl}/organisations/claim?org=${orgSlug}" style="color: #064e3b; font-weight: 600;">claim your organisation</a> and get verified as an official representative.
+    </p>
 
     <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
       If you have questions about Megafone or need help responding, email us at

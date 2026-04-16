@@ -1,8 +1,11 @@
 'use client'
 
 import { useActionState, useState, useRef, useEffect } from 'react'
-import { submitClaimRequest } from './actions'
+import { usePathname } from 'next/navigation'
+import { submitClaimRequest, signUpAndClaim } from './actions'
 import type { Organisation } from '@/types'
+
+// ── Org search select ────────────────────────────────────────────────────────
 
 function OrgSearchSelect({
   organisations,
@@ -70,7 +73,7 @@ function OrgSearchSelect({
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="Search for your club…"
+          placeholder="Search for your club..."
           className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B] transition-shadow"
           autoComplete="off"
         />
@@ -96,36 +99,30 @@ function OrgSearchSelect({
       )}
       {open && query.trim() && results.length === 0 && (
         <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-3 text-sm text-gray-400">
-          No clubs found — <a href="mailto:hello@megafone.co" className="text-[#064E3B] underline">contact us</a> to get yours added.
+          No clubs found — <a href="mailto:hello@megafone.app" className="text-[#064E3B] underline">contact us</a> to get yours added.
         </div>
       )}
     </div>
   )
 }
 
-export default function ClaimForm({ organisations }: { organisations: Organisation[] }) {
-  const [state, formAction, isPending] = useActionState(submitClaimRequest, { error: null })
-  const [orgId, setOrgId] = useState('')
-  const [isOther, setIsOther] = useState(false)
+// ── Shared claim fields (name, role, org) ────────────────────────────────────
 
-  if (state.success) {
-    return (
-      <div className="text-center py-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <p className="text-lg font-bold text-[#064E3B] mb-2">Request submitted</p>
-        <p className="text-sm text-gray-500">
-          We&apos;ve received your request and will be in touch at the email you provided.
-        </p>
-      </div>
-    )
-  }
-
+function ClaimFields({
+  organisations,
+  orgId,
+  setOrgId,
+  isOther,
+  setIsOther,
+}: {
+  organisations: Organisation[]
+  orgId: string
+  setOrgId: (id: string) => void
+  isOther: boolean
+  setIsOther: (v: boolean) => void
+}) {
   return (
-    <form action={formAction} className="space-y-5">
+    <>
       <div>
         <label htmlFor="requester_name" className="block text-sm font-semibold text-gray-700 mb-1">
           Your name <span className="text-[#F59E0B]">*</span>
@@ -190,18 +187,194 @@ export default function ClaimForm({ organisations }: { organisations: Organisati
           </>
         )}
       </div>
+    </>
+  )
+}
 
-      {state.error && (
-        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{state.error}</p>
+// ── Success state ────────────────────────────────────────────────────────────
+
+function SuccessMessage({ isNewAccount }: { isNewAccount: boolean }) {
+  return (
+    <div className="text-center py-4">
+      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+        <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <p className="text-lg font-bold text-[#064E3B] mb-2">Request submitted</p>
+      <p className="text-sm text-gray-500">
+        {isNewAccount
+          ? 'Your account has been created and your claim is under review. Check your email to verify your account.'
+          : 'Your claim is under review. We\'ll be in touch once it\'s been verified.'}
+      </p>
+    </div>
+  )
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
+interface Props {
+  organisations: Organisation[]
+  isAuthenticated: boolean
+  userEmail: string | null
+  userName: string | null
+  preSelectedOrgId: string
+}
+
+export default function ClaimForm({
+  organisations,
+  isAuthenticated,
+  userEmail,
+  preSelectedOrgId,
+}: Props) {
+  const pathname = usePathname()
+  const [mode, setMode] = useState<'claim' | 'signin' | 'signup'>(isAuthenticated ? 'claim' : 'signup')
+  const [claimState, claimAction, claimPending] = useActionState(submitClaimRequest, { error: null })
+  const [signUpState, signUpAction, signUpPending] = useActionState(signUpAndClaim, { error: null })
+  const [orgId, setOrgId] = useState(preSelectedOrgId)
+  const [isOther, setIsOther] = useState(false)
+
+  // Show success
+  if (claimState.success) return <SuccessMessage isNewAccount={false} />
+  if (signUpState.success) return <SuccessMessage isNewAccount={true} />
+
+  // ── State 1: Already signed in ─────────────────────────────────────────────
+  if (isAuthenticated) {
+    return (
+      <div>
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 mb-6">
+          <p className="text-sm text-emerald-800">
+            Signed in as <strong>{userEmail}</strong>
+          </p>
+        </div>
+
+        <form action={claimAction} className="space-y-5">
+          <ClaimFields
+            organisations={organisations}
+            orgId={orgId}
+            setOrgId={setOrgId}
+            isOther={isOther}
+            setIsOther={setIsOther}
+          />
+
+          {claimState.error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{claimState.error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={claimPending}
+            className="w-full rounded-lg bg-[#064E3B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#065F46] disabled:opacity-50 transition-colors"
+          >
+            {claimPending ? 'Submitting...' : 'Submit claim request'}
+          </button>
+        </form>
+      </div>
+    )
+  }
+
+  // ── State 2 & 3: Not signed in ────────────────────────────────────────────
+  return (
+    <div>
+      {/* Toggle between sign up and sign in */}
+      <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold mb-6">
+        <button
+          type="button"
+          onClick={() => setMode('signup')}
+          className={`flex-1 px-4 py-2.5 transition-colors ${
+            mode === 'signup' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          I&apos;m new to Megafone
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('signin')}
+          className={`flex-1 px-4 py-2.5 transition-colors ${
+            mode === 'signin' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          I have an account
+        </button>
+      </div>
+
+      {/* Sign in — redirect to login then back */}
+      {mode === 'signin' && (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Sign in to your existing Megafone account, then you&apos;ll be brought back here to complete your claim.
+          </p>
+          <a
+            href={`/auth/login?returnTo=${encodeURIComponent(pathname + (preSelectedOrgId ? `?org=${organisations.find((o) => o.id === preSelectedOrgId)?.slug ?? ''}` : ''))}`}
+            className="block w-full text-center rounded-lg bg-[#064E3B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#065F46] transition-colors"
+          >
+            Sign in
+          </a>
+        </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-lg bg-[#064E3B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#065F46] disabled:opacity-50 transition-colors"
-      >
-        {isPending ? 'Submitting…' : 'Submit claim request'}
-      </button>
-    </form>
+      {/* Sign up + claim in one step */}
+      {mode === 'signup' && (
+        <form action={signUpAction} className="space-y-5">
+          <div>
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">
+              Work email <span className="text-[#F59E0B]">*</span>
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@yourclub.co.uk"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1">
+              Create a password <span className="text-[#F59E0B]">*</span>
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              placeholder="At least 6 characters"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+            />
+          </div>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-3 text-xs text-gray-400">Your details</span>
+            </div>
+          </div>
+
+          <ClaimFields
+            organisations={organisations}
+            orgId={orgId}
+            setOrgId={setOrgId}
+            isOther={isOther}
+            setIsOther={setIsOther}
+          />
+
+          {signUpState.error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{signUpState.error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={signUpPending}
+            className="w-full rounded-lg bg-[#064E3B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#065F46] disabled:opacity-50 transition-colors"
+          >
+            {signUpPending ? 'Creating account...' : 'Create account & submit claim'}
+          </button>
+        </form>
+      )}
+    </div>
   )
 }
