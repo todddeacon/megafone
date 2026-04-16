@@ -69,7 +69,7 @@ export default async function AdminOrganisationsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <a
-                      href={`/${org.slug}`}
+                      href={`/organisations/${org.slug}`}
                       className="text-sm font-bold text-[#064E3B] hover:underline truncate"
                     >
                       {org.name}
@@ -88,7 +88,7 @@ export default async function AdminOrganisationsPage() {
                   </p>
                 </div>
                 <a
-                  href={`/${org.slug}`}
+                  href={`/organisations/${org.slug}`}
                   className="shrink-0 text-xs text-gray-400 hover:text-[#064E3B] transition-colors"
                 >
                   View &rarr;
