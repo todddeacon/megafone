@@ -332,7 +332,8 @@ export default function HomeClient({ demands, supportedIds }: Props) {
 
   const sorted = useMemo(() => {
     if (tab === 'organisations') return []
-    let list = [...demands]
+    // Exclude example campaigns from all tabs
+    let list = demands.filter((d) => !d.is_example)
     if (tab === 'supporting') {
       list = list.filter((d) => supportedSet.has(d.id))
       list.sort((a, b) => (b.created_at > a.created_at ? 1 : -1))
