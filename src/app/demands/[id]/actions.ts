@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail } from '@/lib/email'
+import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail, sendCreatorFirstSupporterEmail, sendCreatorMilestoneEmail, sendCreatorTargetReachedEmail, sendCreatorResponseReceivedEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 
@@ -68,14 +68,15 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
     await admin.from('demands').update({ status: 'live' }).eq('id', demandId)
   }
 
-  // Send welcome supporter email
-  if (demand && user.email) {
+  // Send welcome supporter email + creator notifications
+  if (demand) {
     const [{ data: creatorProfile }, { data: org }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
       supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
     ])
 
-    if (org) {
+    // Welcome email to the supporter
+    if (user.email && org) {
       await sendWelcomeSupporterEmail({
         to: user.email,
         creatorName: creatorProfile?.name ?? 'A fan',
@@ -84,6 +85,50 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
         demandId,
         supportCount: newCount,
       })
+    }
+
+    // Creator email: first supporter
+    if (newCount === 1 && org) {
+      const creatorAuth = await admin.auth.admin.getUserById(demand.creator_user_id)
+      const creatorEmail = creatorAuth.data?.user?.email
+      if (creatorEmail) {
+        await sendCreatorFirstSupporterEmail({
+          to: creatorEmail,
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+        })
+      }
+    }
+
+    // Creator email: milestone (25%, 50%, 75%)
+    if (demand.notification_threshold && org) {
+      const threshold = demand.notification_threshold
+      const milestones = [
+        { pct: 25, boundary: Math.floor(threshold * 0.25) },
+        { pct: 50, boundary: Math.floor(threshold * 0.50) },
+        { pct: 75, boundary: Math.floor(threshold * 0.75) },
+      ]
+
+      for (const { pct, boundary } of milestones) {
+        // Only send if we just crossed this milestone (previous count was below, new count is at or above)
+        if (boundary > 0 && newCount >= boundary && (newCount - 1) < boundary) {
+          const creatorAuth = await admin.auth.admin.getUserById(demand.creator_user_id)
+          const creatorEmail = creatorAuth.data?.user?.email
+          if (creatorEmail) {
+            await sendCreatorMilestoneEmail({
+              to: creatorEmail,
+              orgName: org.name,
+              demandHeadline: demand.headline,
+              demandId,
+              supportCount: newCount,
+              threshold,
+              percentage: pct,
+            })
+          }
+          break // only send one milestone per support action
+        }
+      }
     }
   }
 
@@ -132,6 +177,19 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
           summary: demand.summary ?? '',
           questions: questions?.map((q) => q.body) ?? [],
         })
+
+        // Creator email: target reached
+        const creatorAuth = await admin.auth.admin.getUserById(demand.creator_user_id)
+        const creatorEmail = creatorAuth.data?.user?.email
+        if (creatorEmail) {
+          await sendCreatorTargetReachedEmail({
+            to: creatorEmail,
+            orgName: org.name,
+            demandHeadline: demand.headline,
+            demandId,
+            threshold: demand.notification_threshold,
+          })
+        }
 
         // Email 2: notify all supporters that the campaign has been sent
         const { data: supporters } = await supabase.from('supports').select('user_id').eq('demand_id', demandId)
@@ -495,7 +553,7 @@ export async function postOfficialResponse(
 
   const { data: demand } = await supabase
     .from('demands')
-    .select('organisation_id, headline, support_count_cache')
+    .select('organisation_id, headline, support_count_cache, creator_user_id')
     .eq('id', demandId)
     .single()
 
@@ -582,20 +640,36 @@ export async function postOfficialResponse(
     supabase.from('supports').select('user_id').eq('demand_id', demandId),
   ])
 
-  if (org && supporters && supporters.length > 0) {
-    const supporterIds = new Set(supporters.map((s) => s.user_id))
-    const emails = await getEmailsForUserIds(supporterIds)
-
-    if (emails.length > 0) {
-      await sendResponseEmail({
-        to: emails,
+  if (org) {
+    // Email creator about the response
+    const creatorAuth = await adminForResponse.auth.admin.getUserById(demand.creator_user_id)
+    const creatorEmail = creatorAuth.data?.user?.email
+    if (creatorEmail) {
+      await sendCreatorResponseReceivedEmail({
+        to: creatorEmail,
         orgName: org.name,
         demandHeadline: demand.headline,
         demandId,
         responseBody: body,
-        hasPdf: !!pdf_url,
-        supportCount: demand.support_count_cache ?? supporters.length,
       })
+    }
+
+    // Email all supporters
+    if (supporters && supporters.length > 0) {
+      const supporterIds = new Set(supporters.map((s) => s.user_id))
+      const emails = await getEmailsForUserIds(supporterIds)
+
+      if (emails.length > 0) {
+        await sendResponseEmail({
+          to: emails,
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+          responseBody: body,
+          hasPdf: !!pdf_url,
+          supportCount: demand.support_count_cache ?? supporters.length,
+        })
+      }
     }
   }
 

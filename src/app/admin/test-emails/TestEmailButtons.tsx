@@ -13,6 +13,11 @@ const emails = [
   { id: 'threshold', name: 'Threshold reached', description: 'Sent to the organisation when target hit', tag: 'existing' },
   { id: 'response', name: 'Official response', description: 'Sent to supporters when org responds', tag: 'existing' },
   { id: 'followup', name: 'Follow-up questions', description: 'Sent to the organisation with follow-ups', tag: 'existing' },
+  { id: 'creator-first-supporter', name: 'First supporter (creator)', description: 'Sent to creator when first person supports', tag: 'new' },
+  { id: 'creator-milestone', name: 'Milestone 50% (creator)', description: 'Sent to creator at 25%, 50%, 75% of target', tag: 'new' },
+  { id: 'creator-target-reached', name: 'Target reached (creator)', description: 'Sent to creator when campaign sent to org', tag: 'new' },
+  { id: 'creator-response', name: 'Response received (creator)', description: 'Sent to creator when org responds', tag: 'new' },
+  { id: 'creator-weekly-digest', name: 'Weekly digest (creator)', description: 'Weekly summary of campaign activity', tag: 'new' },
 ]
 
 export default function TestEmailButtons() {

@@ -9,6 +9,11 @@ import {
   sendThresholdEmail,
   sendResponseEmail,
   sendFollowUpEmail,
+  sendCreatorFirstSupporterEmail,
+  sendCreatorMilestoneEmail,
+  sendCreatorTargetReachedEmail,
+  sendCreatorResponseReceivedEmail,
+  sendCreatorWeeklyDigestEmail,
 } from '@/lib/email'
 
 function isAdmin(email: string) {
@@ -144,6 +149,61 @@ export async function sendTestEmail(
             'Can you provide a breakdown of the operational costs?',
             'When will the concession scheme be announced?',
           ],
+        })
+        break
+
+      // ── Creator emails ──
+
+      case 'creator-first-supporter':
+        await sendCreatorFirstSupporterEmail({
+          to,
+          orgName,
+          demandHeadline,
+          demandId,
+        })
+        break
+
+      case 'creator-milestone':
+        await sendCreatorMilestoneEmail({
+          to,
+          orgName,
+          demandHeadline,
+          demandId,
+          supportCount: 1250,
+          threshold,
+          percentage: 50,
+        })
+        break
+
+      case 'creator-target-reached':
+        await sendCreatorTargetReachedEmail({
+          to,
+          orgName,
+          demandHeadline,
+          demandId,
+          threshold,
+        })
+        break
+
+      case 'creator-response':
+        await sendCreatorResponseReceivedEmail({
+          to,
+          orgName,
+          demandHeadline,
+          demandId,
+          responseBody: 'Thank you for raising this question. We understand the concern around pricing and want to be transparent. The increase reflects rising operational costs, including the new stadium maintenance programme. We are committed to keeping football accessible and will be introducing a new concession scheme for under-25s and over-65s.',
+        })
+        break
+
+      case 'creator-weekly-digest':
+        await sendCreatorWeeklyDigestEmail({
+          to,
+          demandHeadline,
+          demandId,
+          status: 'live',
+          totalSupporters: supportCount,
+          newSupportersThisWeek: 342,
+          commentsThisWeek: 18,
         })
         break
 

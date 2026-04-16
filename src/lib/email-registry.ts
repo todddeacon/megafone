@@ -83,6 +83,54 @@ export const emailRegistry: EmailDefinition[] = [
     source: 'src/app/demands/[id]/actions.ts → addCreatorUpdate() / addDemandLink()',
   },
 
+  // ── Creator emails (sent via Resend) ────────────────────────────
+
+  {
+    id: 'creator-first-supporter',
+    name: 'First supporter (creator)',
+    description: 'Notifies the campaign creator that their campaign has received its first supporter. Encourages sharing.',
+    trigger: 'The first person supports a campaign.',
+    recipients: 'The campaign creator',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand()',
+  },
+  {
+    id: 'creator-milestone',
+    name: 'Milestone reached (creator)',
+    description: 'Notifies the creator when their campaign hits 25%, 50%, or 75% of the supporter target. Shows progress and encourages continued sharing.',
+    trigger: 'Campaign support count crosses 25%, 50%, or 75% of the notification threshold.',
+    recipients: 'The campaign creator',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand()',
+  },
+  {
+    id: 'creator-target-reached',
+    name: 'Target reached (creator)',
+    description: 'Notifies the creator that their campaign reached its target and has been sent to the organisation.',
+    trigger: 'Campaign crosses the notification threshold and the organisation is notified.',
+    recipients: 'The campaign creator',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → supportDemand() (threshold crossed)',
+  },
+  {
+    id: 'creator-response-received',
+    name: 'Response received (creator)',
+    description: 'Notifies the creator that the organisation has posted an official response. Prompts them to review and mark the outcome.',
+    trigger: 'An organisation representative posts an official response.',
+    recipients: 'The campaign creator',
+    sender: 'megafone',
+    source: 'src/app/demands/[id]/actions.ts → postOfficialResponse()',
+  },
+  {
+    id: 'creator-weekly-digest',
+    name: 'Weekly digest (creator)',
+    description: 'Weekly summary showing total supporters, new supporters this week, comments this week, and campaign status. Only sent if there was activity.',
+    trigger: 'Vercel Cron job runs every Monday at 9am UTC.',
+    recipients: 'Creators of active campaigns with activity in the past week',
+    sender: 'megafone',
+    source: 'src/app/api/cron/creator-digest/route.ts',
+  },
+
   // ── Supabase auth emails (managed by Supabase) ────────────────
 
   {
