@@ -25,7 +25,7 @@ export async function sendThresholdEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const questionsHtml = questions
@@ -176,7 +176,7 @@ export async function sendResponseEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const responseSnippet = responseBody
@@ -332,7 +332,7 @@ export async function sendFollowUpEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const questionsHtml = questions
@@ -563,7 +563,7 @@ export async function sendWelcomeSupporterEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const body = `
@@ -623,7 +623,7 @@ export async function sendCampaignSentEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const body = `
@@ -681,7 +681,7 @@ export async function sendCampaignResolvedEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   const isResolved = resolution === 'resolved'
@@ -752,7 +752,7 @@ export async function sendCreatorUpdateEmail({
     return
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.co'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
   const campaignUrl = `${siteUrl}/demands/${demandId}`
 
   let snippetHtml = ''
