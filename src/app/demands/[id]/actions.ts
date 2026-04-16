@@ -65,10 +65,12 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
   // Auto-transition building → live on first supporter (uses admin client to bypass RLS)
   const admin = createAdminClient()
   if (newCount === 1 && demand?.status === 'building') {
-    await admin.from('demands').update({ status: 'live' }).eq('id', demandId)
+    const { error: statusError } = await admin.from('demands').update({ status: 'live' }).eq('id', demandId)
+    if (statusError) console.error('[supportDemand] Failed to transition to live:', statusError.message)
   }
 
-  // Send welcome supporter email + creator notifications
+  // Send welcome supporter email + creator notifications — wrapped in try-catch so failures don't block the action
+  try {
   if (demand) {
     const [{ data: creatorProfile }, { data: org }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
@@ -222,6 +224,9 @@ export async function supportDemand(demandId: string): Promise<ActionState> {
       }
     }
   }
+  } catch (emailError) {
+    console.error('[supportDemand] Email/notification error:', emailError)
+  }
 
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
@@ -292,7 +297,8 @@ export async function deleteComment(commentId: string): Promise<ActionState> {
   if (!comment) return { error: 'Comment not found.' }
   if (comment.user_id !== user.id) return { error: 'You can only delete your own comments.' }
 
-  await supabase.from('comments').delete().eq('id', commentId)
+  const { error: deleteError } = await supabase.from('comments').delete().eq('id', commentId)
+  if (deleteError) return { error: 'Failed to delete comment. Please try again.' }
   revalidatePath(`/demands/${comment.demand_id}`)
   revalidateTag(`demand-${comment.demand_id}`, { expire: 0 })
   return { error: null }
@@ -349,7 +355,8 @@ export async function addFollowUpQuestion(
   if (insertError) return { error: 'Failed to add follow-up question. Please try again.' }
 
   if (demand.status === 'responded') {
-    await supabase.from('demands').update({ status: 'further_questions' }).eq('id', demandId)
+    const { error: statusError } = await supabase.from('demands').update({ status: 'further_questions' }).eq('id', demandId)
+    if (statusError) console.error('[addFollowUpQuestion] Status update failed:', statusError.message)
   }
 
   await supabase
@@ -404,46 +411,48 @@ export async function addCreatorUpdate(
 
   if (insertError) return { error: 'Failed to post update. Please try again.' }
 
-  // Email all supporters about the update
-  const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
-    supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
-    supabase.from('supports').select('user_id').eq('demand_id', demandId),
-  ])
-
-  if (supporters && supporters.length > 0) {
-    const supporterIds = new Set(supporters.map((s) => s.user_id))
-    const emails = await getEmailsForUserIds(supporterIds)
-    if (emails.length > 0) {
-      await sendCreatorUpdateEmail({
-        to: emails,
-        creatorName: creatorProfile?.name ?? 'The campaign creator',
-        demandHeadline: demand.headline,
-        demandId,
-        updateBody: body,
-        hasVideo: false,
-      })
-    }
-  }
-
-  // Notify org of the update (only if campaign already sent to them)
-  if (demand.threshold_notified_at) {
-    const adminClient = createAdminClient()
-    const [{ data: org }, { data: notifEmails }] = await Promise.all([
-      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
-      adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+  try {
+    const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
+      supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+      supabase.from('supports').select('user_id').eq('demand_id', demandId),
     ])
-    const orgEmails = notifEmails?.map((e) => e.email) ?? []
-    if (org && orgEmails.length > 0) {
-      await sendOrgCreatorUpdateEmail({
-        to: orgEmails,
-        orgName: org.name,
-        demandHeadline: demand.headline,
-        demandId,
-        supportCount: demand.support_count_cache ?? 0,
-        updateBody: body,
-        hasVideo: false,
-      })
+
+    if (supporters && supporters.length > 0) {
+      const supporterIds = new Set(supporters.map((s) => s.user_id))
+      const emails = await getEmailsForUserIds(supporterIds)
+      if (emails.length > 0) {
+        await sendCreatorUpdateEmail({
+          to: emails,
+          creatorName: creatorProfile?.name ?? 'The campaign creator',
+          demandHeadline: demand.headline,
+          demandId,
+          updateBody: body,
+          hasVideo: false,
+        })
+      }
     }
+
+    if (demand.threshold_notified_at) {
+      const adminClient = createAdminClient()
+      const [{ data: org }, { data: notifEmails }] = await Promise.all([
+        supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+        adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+      ])
+      const orgEmails = notifEmails?.map((e) => e.email) ?? []
+      if (org && orgEmails.length > 0) {
+        await sendOrgCreatorUpdateEmail({
+          to: orgEmails,
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+          supportCount: demand.support_count_cache ?? 0,
+          updateBody: body,
+          hasVideo: false,
+        })
+      }
+    }
+  } catch (emailError) {
+    console.error('[addCreatorUpdate] Email error:', emailError)
   }
 
   revalidatePath(`/demands/${demandId}`)
@@ -491,46 +500,48 @@ export async function addDemandLink(
 
   if (insertError) return { error: 'Failed to add content. Please try again.' }
 
-  // Email supporters about new content
-  const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
-    supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
-    supabase.from('supports').select('user_id').eq('demand_id', demandId),
-  ])
-
-  if (supporters && supporters.length > 0) {
-    const supporterIds = new Set(supporters.map((s) => s.user_id))
-    const emails = await getEmailsForUserIds(supporterIds)
-    if (emails.length > 0) {
-      await sendCreatorUpdateEmail({
-        to: emails,
-        creatorName: creatorProfile?.name ?? 'The campaign creator',
-        demandHeadline: demand.headline,
-        demandId,
-        updateBody: null,
-        hasVideo: true,
-      })
-    }
-  }
-
-  // Notify org of the content (only if campaign already sent to them)
-  if (demand.threshold_notified_at) {
-    const adminClient = createAdminClient()
-    const [{ data: org }, { data: notifEmails }] = await Promise.all([
-      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
-      adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+  try {
+    const [{ data: creatorProfile }, { data: supporters }] = await Promise.all([
+      supabase.from('profiles').select('name').eq('id', user.id).maybeSingle(),
+      supabase.from('supports').select('user_id').eq('demand_id', demandId),
     ])
-    const orgEmails = notifEmails?.map((e) => e.email) ?? []
-    if (org && orgEmails.length > 0) {
-      await sendOrgCreatorUpdateEmail({
-        to: orgEmails,
-        orgName: org.name,
-        demandHeadline: demand.headline,
-        demandId,
-        supportCount: demand.support_count_cache ?? 0,
-        updateBody: null,
-        hasVideo: true,
-      })
+
+    if (supporters && supporters.length > 0) {
+      const supporterIds = new Set(supporters.map((s) => s.user_id))
+      const emails = await getEmailsForUserIds(supporterIds)
+      if (emails.length > 0) {
+        await sendCreatorUpdateEmail({
+          to: emails,
+          creatorName: creatorProfile?.name ?? 'The campaign creator',
+          demandHeadline: demand.headline,
+          demandId,
+          updateBody: null,
+          hasVideo: true,
+        })
+      }
     }
+
+    if (demand.threshold_notified_at) {
+      const adminClient = createAdminClient()
+      const [{ data: org }, { data: notifEmails }] = await Promise.all([
+        supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+        adminClient.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
+      ])
+      const orgEmails = notifEmails?.map((e) => e.email) ?? []
+      if (org && orgEmails.length > 0) {
+        await sendOrgCreatorUpdateEmail({
+          to: orgEmails,
+          orgName: org.name,
+          demandHeadline: demand.headline,
+          demandId,
+          supportCount: demand.support_count_cache ?? 0,
+          updateBody: null,
+          hasVideo: true,
+        })
+      }
+    }
+  } catch (emailError) {
+    console.error('[addDemandLink] Email error:', emailError)
   }
 
   revalidatePath(`/demands/${demandId}`)
@@ -559,9 +570,11 @@ export async function setResolutionStatus(
   const valid = ['resolved', 'unsatisfactory', 'further_questions']
   if (!valid.includes(resolution)) return { error: 'Invalid resolution.' }
 
-  await supabase.from('demands').update({ status: resolution }).eq('id', demandId)
+  const { error: statusError } = await supabase.from('demands').update({ status: resolution }).eq('id', demandId)
+  if (statusError) return { error: 'Failed to update campaign status. Please try again.' }
 
   // Email supporters about the resolution (resolved or unsatisfactory only)
+  try {
   if (resolution === 'resolved' || resolution === 'unsatisfactory') {
     const [{ data: creatorProfile }, { data: org }, { data: supporters }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
@@ -584,6 +597,9 @@ export async function setResolutionStatus(
         })
       }
     }
+  }
+  } catch (emailError) {
+    console.error('[setResolutionStatus] Email error:', emailError)
   }
 
   revalidatePath(`/demands/${demandId}`)
@@ -682,49 +698,52 @@ export async function postOfficialResponse(
   if (insertError) return { error: 'Failed to post response. Please try again.' }
 
   const adminForResponse = createAdminClient()
-  await adminForResponse.from('demands').update({ status: 'responded' }).eq('id', demandId)
+  const { error: statusError } = await adminForResponse.from('demands').update({ status: 'responded' }).eq('id', demandId)
+  if (statusError) console.error('[postOfficialResponse] Status update failed:', statusError.message)
 
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
   revalidateTag('demands-list', { expire: 0 })
 
-  // Email all supporters — fetch their IDs then resolve emails via admin client
-  const [{ data: org }, { data: supporters }] = await Promise.all([
-    supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
-    supabase.from('supports').select('user_id').eq('demand_id', demandId),
-  ])
+  // Email creator and supporters — wrapped in try-catch so failures don't block
+  try {
+    const [{ data: org }, { data: supporters }] = await Promise.all([
+      supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),
+      supabase.from('supports').select('user_id').eq('demand_id', demandId),
+    ])
 
-  if (org) {
-    // Email creator about the response
-    const creatorAuth = await adminForResponse.auth.admin.getUserById(demand.creator_user_id)
-    const creatorEmail = creatorAuth.data?.user?.email
-    if (creatorEmail) {
-      await sendCreatorResponseReceivedEmail({
-        to: creatorEmail,
-        orgName: org.name,
-        demandHeadline: demand.headline,
-        demandId,
-        responseBody: body,
-      })
-    }
-
-    // Email all supporters
-    if (supporters && supporters.length > 0) {
-      const supporterIds = new Set(supporters.map((s) => s.user_id))
-      const emails = await getEmailsForUserIds(supporterIds)
-
-      if (emails.length > 0) {
-        await sendResponseEmail({
-          to: emails,
+    if (org) {
+      const creatorAuth = await adminForResponse.auth.admin.getUserById(demand.creator_user_id)
+      const creatorEmail = creatorAuth.data?.user?.email
+      if (creatorEmail) {
+        await sendCreatorResponseReceivedEmail({
+          to: creatorEmail,
           orgName: org.name,
           demandHeadline: demand.headline,
           demandId,
           responseBody: body,
-          hasPdf: !!pdf_url,
-          supportCount: demand.support_count_cache ?? supporters.length,
         })
       }
+
+      if (supporters && supporters.length > 0) {
+        const supporterIds = new Set(supporters.map((s) => s.user_id))
+        const emails = await getEmailsForUserIds(supporterIds)
+
+        if (emails.length > 0) {
+          await sendResponseEmail({
+            to: emails,
+            orgName: org.name,
+            demandHeadline: demand.headline,
+            demandId,
+            responseBody: body,
+            hasPdf: !!pdf_url,
+            supportCount: demand.support_count_cache ?? supporters.length,
+          })
+        }
+      }
     }
+  } catch (emailError) {
+    console.error('[postOfficialResponse] Email error:', emailError)
   }
 
   return { error: null }
@@ -762,20 +781,27 @@ export async function notifyOrgFollowUp(demandId: string): Promise<ActionState> 
     adminForNotify.from('organisation_notification_emails').select('email').eq('organisation_id', demand.organisation_id),
   ])
 
-  await supabase.from('demands').update({ status: 'notified' }).eq('id', demandId)
-  await adminForNotify.from('organisation_notifications').insert({ demand_id: demandId, sent_at: new Date().toISOString() })
+  const { error: statusError } = await supabase.from('demands').update({ status: 'notified' }).eq('id', demandId)
+  if (statusError) console.error('[notifyOrgFollowUp] Status update failed:', statusError.message)
 
-  const emails = notifEmails?.map((e) => e.email) ?? []
-  if (org && emails.length > 0) {
-    await sendFollowUpEmail({
-      to: emails,
-      orgName: org.name,
-      demandHeadline: demand.headline,
-      demandId,
-      round: latestRound,
-      supportCount: demand.support_count_cache ?? 0,
-      questions: roundQuestions?.map((q) => q.body) ?? [],
-    })
+  const { error: notifError } = await adminForNotify.from('organisation_notifications').insert({ demand_id: demandId, sent_at: new Date().toISOString() })
+  if (notifError) console.error('[notifyOrgFollowUp] Notification log failed:', notifError.message)
+
+  try {
+    const emails = notifEmails?.map((e) => e.email) ?? []
+    if (org && emails.length > 0) {
+      await sendFollowUpEmail({
+        to: emails,
+        orgName: org.name,
+        demandHeadline: demand.headline,
+        demandId,
+        round: latestRound,
+        supportCount: demand.support_count_cache ?? 0,
+        questions: roundQuestions?.map((q) => q.body) ?? [],
+      })
+    }
+  } catch (emailError) {
+    console.error('[notifyOrgFollowUp] Email error:', emailError)
   }
 
   revalidatePath(`/demands/${demandId}`)

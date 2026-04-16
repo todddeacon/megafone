@@ -25,6 +25,12 @@ export async function submitClaimRequest(
   if (!requester_role) return { error: 'Your role is required.' }
   if (!organisation_id && !organisation_other) return { error: 'Please select or name your club.' }
 
+  // Verify the organisation exists if an ID was provided
+  if (organisation_id) {
+    const { data: org } = await supabase.from('organisations').select('id').eq('id', organisation_id).maybeSingle()
+    if (!org) return { error: 'Organisation not found. Please try again.' }
+  }
+
   const requester_email = user.email
   if (!requester_email) return { error: 'Your account does not have a verified email.' }
 
@@ -62,6 +68,11 @@ export async function signUpAndClaim(
   if (!requester_name) return { error: 'Your name is required.' }
   if (!requester_role) return { error: 'Your role is required.' }
   if (!organisation_id && !organisation_other) return { error: 'Please select or name your club.' }
+
+  if (organisation_id) {
+    const { data: org } = await supabase.from('organisations').select('id').eq('id', organisation_id).maybeSingle()
+    if (!org) return { error: 'Organisation not found. Please try again.' }
+  }
 
   // Create the account
   const { data, error: signUpError } = await supabase.auth.signUp({ email, password })

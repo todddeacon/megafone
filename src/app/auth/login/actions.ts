@@ -26,6 +26,17 @@ export async function signInWithProvider(formData: FormData): Promise<void> {
 
 export type AuthState = { error: string | null; success?: string }
 
+function friendlyAuthError(message: string): string {
+  const lower = message.toLowerCase()
+  if (lower.includes('invalid login credentials')) return 'Incorrect email or password.'
+  if (lower.includes('email not confirmed')) return 'Please verify your email before signing in. Check your inbox.'
+  if (lower.includes('user already registered')) return 'An account with this email already exists. Try signing in instead.'
+  if (lower.includes('password should be at least')) return 'Password must be at least 6 characters.'
+  if (lower.includes('rate limit')) return 'Too many attempts. Please wait a moment and try again.'
+  if (lower.includes('signup is not allowed')) return 'Sign-ups are currently disabled. Please try again later.'
+  return message
+}
+
 function safeReturnTo(raw: string | null): string {
   // Only allow relative paths — prevents open redirect to external URLs
   if (!raw) return '/'
@@ -47,7 +58,7 @@ export async function signIn(
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyAuthError(error.message) }
 
   redirect(returnTo)
 }
@@ -71,7 +82,7 @@ export async function signInWithMagicLink(
     },
   })
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyAuthError(error.message) }
 
   return { error: null, success: 'Check your email for a sign-in link.' }
 }
@@ -93,7 +104,7 @@ export async function signUp(
 
   const { data, error } = await supabase.auth.signUp({ email, password })
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyAuthError(error.message) }
 
   if (data.user) {
     const admin = createAdminClient()

@@ -61,6 +61,7 @@ export async function approveClaimRequest(claimId: string): Promise<AdminActionS
   if (claim.organisation_id) {
     const targetUser = await findUserByEmail(claim.requester_email)
     if (!targetUser) return { error: `No account found for ${claim.requester_email}. They must sign up first.` }
+    if (!targetUser.email_confirmed_at) return { error: `${claim.requester_email} has not verified their email yet.` }
 
     const { error: repError } = await admin
       .from('org_reps')
