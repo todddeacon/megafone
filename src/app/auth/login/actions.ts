@@ -23,7 +23,7 @@ export async function signInWithProvider(formData: FormData): Promise<void> {
   redirect(data.url)
 }
 
-export type AuthState = { error: string | null }
+export type AuthState = { error: string | null; success?: string }
 
 function safeReturnTo(raw: string | null): string {
   // Only allow relative paths — prevents open redirect to external URLs
@@ -49,6 +49,30 @@ export async function signIn(
   if (error) return { error: error.message }
 
   redirect(returnTo)
+}
+
+export async function signInWithMagicLink(
+  _prevState: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const supabase = await createClient()
+
+  const email = (formData.get('email') as string)?.trim()
+  const returnTo = safeReturnTo(formData.get('returnTo') as string)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  if (!email) return { error: 'Email is required.' }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${appUrl}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`,
+    },
+  })
+
+  if (error) return { error: error.message }
+
+  return { error: null, success: 'Check your email for a sign-in link.' }
 }
 
 export async function signUp(

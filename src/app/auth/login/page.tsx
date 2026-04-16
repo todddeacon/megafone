@@ -2,12 +2,14 @@
 
 import { useActionState, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { signIn, signUp, signInWithProvider } from './actions'
+import { signIn, signUp, signInWithProvider, signInWithMagicLink } from './actions'
 
 function LoginForm() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [signInState, signInAction, signInPending] = useActionState(signIn, { error: null })
   const [signUpState, signUpAction, signUpPending] = useActionState(signUp, { error: null })
+  const [magicLinkState, magicLinkAction, magicLinkPending] = useActionState(signInWithMagicLink, { error: null })
+  const [showMagicLink, setShowMagicLink] = useState(false)
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') ?? '/'
 
@@ -55,92 +57,154 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ── Email / password form ── */}
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="returnTo" value={returnTo} />
+          {/* ── Magic link form ── */}
+          {mode === 'signin' && showMagicLink ? (
+            <div className="space-y-4">
+              {magicLinkState.success ? (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
+                  <p className="text-sm font-semibold text-emerald-800">Check your email</p>
+                  <p className="text-xs text-emerald-600 mt-1">We sent a sign-in link to your email. Click the link to sign in — no password needed.</p>
+                </div>
+              ) : (
+                <form action={magicLinkAction} className="space-y-4">
+                  <input type="hidden" name="returnTo" value={returnTo} />
+                  <div>
+                    <label htmlFor="magic-email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      id="magic-email"
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+                      placeholder="you@example.com"
+                    />
+                  </div>
 
-            {mode === 'signup' && (
-              <>
+                  {magicLinkState.error && (
+                    <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{magicLinkState.error}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={magicLinkPending}
+                    className="w-full rounded-lg bg-[#064E3B] px-4 py-2 text-sm font-semibold text-white hover:opacity-80 disabled:opacity-50 transition-opacity"
+                  >
+                    {magicLinkPending ? 'Sending link…' : 'Send magic link'}
+                  </button>
+                </form>
+              )}
+
+              <p className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowMagicLink(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline"
+                >
+                  Use password instead
+                </button>
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* ── Email / password form ── */}
+              <form action={action} className="space-y-4">
+                <input type="hidden" name="returnTo" value={returnTo} />
+
+                {mode === 'signup' && (
+                  <>
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Full name <span className="text-[#F59E0B]">*</span>
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        type="text"
+                        required
+                        autoComplete="name"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+                        placeholder="Your full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
+                        Nickname <span className="text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        id="nickname"
+                        name="nickname"
+                        type="text"
+                        autoComplete="off"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+                        placeholder="How you'll appear in comments"
+                      />
+                      <p className="mt-1 text-xs text-gray-400">You can always set this later.</p>
+                    </div>
+                  </>
+                )}
+
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Full name <span className="text-[#F59E0B]">*</span>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
                   </label>
                   <input
-                    id="name"
-                    name="name"
-                    type="text"
+                    id="email"
+                    name="email"
+                    type="email"
                     required
-                    autoComplete="name"
+                    autoComplete="email"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
-                    placeholder="Your full name"
+                    placeholder="you@example.com"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
-                    Nickname <span className="text-gray-400 font-normal">(optional)</span>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Password
                   </label>
                   <input
-                    id="nickname"
-                    name="nickname"
-                    type="text"
-                    autoComplete="off"
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
-                    placeholder="How you'll appear in comments"
+                    placeholder="••••••••"
                   />
-                  <p className="mt-1 text-xs text-gray-400">You can always set this later.</p>
                 </div>
-              </>
-            )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
-                placeholder="you@example.com"
-              />
-            </div>
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+                )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
-                placeholder="••••••••"
-              />
-            </div>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="w-full rounded-lg bg-[#064E3B] px-4 py-2 text-sm font-semibold text-white hover:opacity-80 disabled:opacity-50 transition-opacity"
+                >
+                  {pending ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+                </button>
+              </form>
 
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={pending}
-              className="w-full rounded-lg bg-[#064E3B] px-4 py-2 text-sm font-semibold text-white hover:opacity-80 disabled:opacity-50 transition-opacity"
-            >
-              {pending ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
-            </button>
-          </form>
-
-          {mode === 'signin' && (
-            <p className="mt-3 text-center text-sm">
-              <a href="/auth/forgot-password" className="text-gray-400 hover:text-gray-600 underline">
-                Forgot your password?
-              </a>
-            </p>
+              {mode === 'signin' && (
+                <div className="mt-3 flex items-center justify-center gap-3 text-sm">
+                  <a href="/auth/forgot-password" className="text-gray-400 hover:text-gray-600 underline">
+                    Forgot password?
+                  </a>
+                  <span className="text-gray-200">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMagicLink(true)}
+                    className="text-gray-400 hover:text-gray-600 underline"
+                  >
+                    Sign in with magic link
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           <p className="mt-4 text-center text-sm text-gray-500">

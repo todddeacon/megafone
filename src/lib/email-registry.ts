@@ -58,6 +58,15 @@ export const emailRegistry: EmailDefinition[] = [
     source: 'src/app/auth/login/actions.ts → signUp()',
   },
   {
+    id: 'magic-link',
+    name: 'Magic link sign-in',
+    description: 'Sent when a user chooses to sign in via magic link instead of a password. Contains a one-click link that logs them in automatically. Expires after 24 hours.',
+    trigger: 'A user clicks "Sign in with magic link" and submits their email.',
+    recipients: 'The user who requested the link',
+    sender: 'supabase',
+    source: 'src/app/auth/login/actions.ts → signInWithMagicLink()',
+  },
+  {
     id: 'password-reset',
     name: 'Password reset',
     description: 'Sent when a user requests to reset their password. Contains a link to the reset password page.',
