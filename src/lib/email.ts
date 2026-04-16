@@ -698,7 +698,7 @@ export async function sendCampaignResolvedEmail({
     <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
       ${isResolved
         ? `${escapeHtml(creatorName)} has reviewed the response from ${escapeHtml(orgName)} and now considers it is resolved.`
-        : `The creator of this campaign has reviewed the response from ${escapeHtml(orgName)} and feels the answers were not satisfactory.`
+        : `${escapeHtml(creatorName)} has reviewed the response from ${escapeHtml(orgName)} and feels the answers were not satisfactory.`
       }
     </p>
 
