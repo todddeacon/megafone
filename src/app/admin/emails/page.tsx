@@ -28,6 +28,12 @@ export default async function AdminEmailsPage() {
             {emailRegistry.length} email{emailRegistry.length !== 1 ? 's' : ''} configured &middot;
             {' '}{megafoneEmails.length} via Resend &middot; {supabaseEmails.length} via Supabase
           </p>
+          <a
+            href="/admin/test-emails"
+            className="inline-flex items-center gap-2 mt-3 rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all"
+          >
+            Send test emails &rarr;
+          </a>
         </div>
 
         {/* Megafone emails */}
