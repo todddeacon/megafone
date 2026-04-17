@@ -384,12 +384,16 @@ export async function addCreatorUpdate(
   if (!user) return { error: 'You must be signed in.' }
 
   const adminForRead = createAdminClient()
-  const { data: demand } = await adminForRead
+  const { data: demand, error: demandReadError } = await adminForRead
     .from('demands')
     .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
     .single()
 
+  if (demandReadError) {
+    console.error('[addCreatorUpdate] Demand read error:', demandReadError.message, 'demandId:', demandId)
+    return { error: `Could not load campaign. ${demandReadError.message}` }
+  }
   if (!demand) return { error: 'Demand not found.' }
   if (demand.creator_user_id !== user.id) return { error: 'Only the creator can post updates.' }
 
@@ -476,12 +480,16 @@ export async function addDemandLink(
   if (!user) return { error: 'You must be signed in.' }
 
   const adminForRead = createAdminClient()
-  const { data: demand } = await adminForRead
+  const { data: demand, error: demandReadError } = await adminForRead
     .from('demands')
     .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
     .single()
 
+  if (demandReadError) {
+    console.error('[addDemandLink] Demand read error:', demandReadError.message, 'demandId:', demandId)
+    return { error: `Could not load campaign. ${demandReadError.message}` }
+  }
   if (!demand) return { error: 'Demand not found.' }
   if (demand.creator_user_id !== user.id) return { error: 'Only the creator can add content.' }
 
