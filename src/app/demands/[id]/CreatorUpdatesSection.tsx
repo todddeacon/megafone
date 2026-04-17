@@ -6,6 +6,7 @@ interface Update {
 
 interface Props {
   updates: Update[]
+  creatorName: string | null
 }
 
 function formatDate(iso: string) {
@@ -24,7 +25,7 @@ function formatTime(iso: string) {
   })
 }
 
-export default function CreatorUpdatesSection({ updates }: Props) {
+export default function CreatorUpdatesSection({ updates, creatorName }: Props) {
   if (updates.length === 0) return null
 
   const sorted = [...updates].sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -32,7 +33,9 @@ export default function CreatorUpdatesSection({ updates }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Creator Updates</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+          Updates by {creatorName ?? 'the creator'}
+        </h2>
         <span className="text-xs font-semibold text-gray-400">{updates.length} {updates.length === 1 ? 'update' : 'updates'}</span>
       </div>
 

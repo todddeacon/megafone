@@ -263,7 +263,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
             )}
 
             {/* Creator updates */}
-            <CreatorUpdatesSection updates={creatorUpdates} />
+            <CreatorUpdatesSection updates={creatorUpdates} creatorName={creatorName} />
 
             {/* Related videos */}
             <RelatedVideosSection demandId={id} links={videoLinks} isCreator={isCreator} />
