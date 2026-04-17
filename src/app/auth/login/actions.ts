@@ -120,5 +120,5 @@ export async function signUp(
     await autoAssignOrgRep(data.user.id, email)
   }
 
-  redirect(returnTo)
+  return { error: null, success: 'Check your email to verify your account. Click the link in the email to get started.' }
 }

@@ -16,6 +16,33 @@ function LoginForm() {
   const action = mode === 'signin' ? signInAction : signUpAction
   const pending = mode === 'signin' ? signInPending : signUpPending
   const error = mode === 'signin' ? signInState.error : signUpState.error
+  const success = mode === 'signup' ? signUpState.success : null
+
+  // Show verification message after signup
+  if (success) {
+    return (
+      <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-[#064E3B] mb-2">Check your email</h2>
+            <p className="text-sm text-gray-500 mb-6">{success}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="text-sm text-gray-400 hover:text-gray-600 underline"
+            >
+              Back to sign in
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12">
