@@ -187,7 +187,35 @@ export async function runHealthCheck(): Promise<HealthCheckResult> {
     return 'RLS correctly blocked unauthorised demand update'
   }))
 
-  // ── 9. Email config ───────────────────────────────────────────
+  // ── 9. Database schema completeness ────────────────────────────
+  results.push(await runTest('Database schema', async () => {
+    const requiredColumns = [
+      { table: 'demands', column: 'notification_threshold' },
+      { table: 'demands', column: 'threshold_notified_at' },
+      { table: 'demands', column: 'moderation_status' },
+      { table: 'demands', column: 'moderation_scores' },
+      { table: 'demands', column: 'is_example' },
+      { table: 'demand_questions', column: 'round' },
+      { table: 'demand_updates', column: 'video_url' },
+      { table: 'comments', column: 'parent_comment_id' },
+      { table: 'claim_requests', column: 'requester_name' },
+      { table: 'claim_requests', column: 'organisation_other' },
+    ]
+
+    const { data: columns } = await admin.rpc('get_columns_check') as { data: null }
+
+    // Fallback: test by selecting each column
+    const missing: string[] = []
+    for (const { table, column } of requiredColumns) {
+      const { error } = await admin.from(table).select(column).limit(1)
+      if (error) missing.push(`${table}.${column}`)
+    }
+
+    if (missing.length > 0) throw new Error(`Missing columns: ${missing.join(', ')}`)
+    return `All ${requiredColumns.length} required columns exist`
+  }))
+
+  // ── 10. Email config ──────────────────────────────────────────
   results.push(await runTest('Email config (Resend)', async () => {
     if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not set')
     return 'RESEND_API_KEY is configured'
