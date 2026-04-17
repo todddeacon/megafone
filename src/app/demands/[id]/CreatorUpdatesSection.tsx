@@ -1,3 +1,5 @@
+import CreatorUpdateForm from './CreatorUpdateForm'
+
 interface Update {
   id: string
   body: string
@@ -7,6 +9,8 @@ interface Update {
 interface Props {
   updates: Update[]
   creatorName: string | null
+  isCreator: boolean
+  demandId: string
 }
 
 function timeAgo(iso: string): string {
@@ -29,8 +33,9 @@ function formatDate(iso: string) {
   })
 }
 
-export default function CreatorUpdatesSection({ updates, creatorName }: Props) {
-  if (updates.length === 0) return null
+export default function CreatorUpdatesSection({ updates, creatorName, isCreator, demandId }: Props) {
+  // Show the section if there are updates OR if the creator needs the form
+  if (updates.length === 0 && !isCreator) return null
 
   const sorted = [...updates].sort((a, b) => b.created_at.localeCompare(a.created_at))
 
@@ -40,43 +45,59 @@ export default function CreatorUpdatesSection({ updates, creatorName }: Props) {
         <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
           Updates by {creatorName ?? 'the creator'}
         </h2>
-        <span className="text-xs font-semibold text-gray-400">{updates.length} {updates.length === 1 ? 'update' : 'updates'}</span>
+        {updates.length > 0 && (
+          <span className="text-xs font-semibold text-gray-400">{updates.length} {updates.length === 1 ? 'update' : 'updates'}</span>
+        )}
       </div>
 
       <div className="px-6 py-5">
-        {/* Timeline */}
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-[#064E3B]/15 rounded-full" />
-
-          <div className="space-y-6">
-            {sorted.map((update, i) => (
-              <div key={update.id} className="relative pl-7">
-                {/* Dot */}
-                <div className={`absolute left-0 top-1 w-[11px] h-[11px] rounded-full border-2 ${
-                  i === 0
-                    ? 'bg-[#064E3B] border-[#064E3B]'
-                    : 'bg-white border-[#064E3B]/30'
-                }`} />
-
-                {/* Badge for latest */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <p className="text-xs font-semibold text-gray-500">{formatDate(update.created_at)}</p>
-                  <span className="text-[10px] text-gray-400">{timeAgo(update.created_at)}</span>
-                  {i === 0 && (
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#064E3B] bg-[#064E3B]/10 rounded-full px-2 py-0.5">
-                      Latest
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                  {update.body}
-                </p>
-              </div>
-            ))}
+        {/* Creator form at the top */}
+        {isCreator && (
+          <div className={updates.length > 0 ? 'mb-6 pb-6 border-b border-gray-100' : ''}>
+            <CreatorUpdateForm demandId={demandId} />
           </div>
-        </div>
+        )}
+
+        {/* Timeline */}
+        {sorted.length > 0 && (
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-[#064E3B]/15 rounded-full" />
+
+            <div className="space-y-6">
+              {sorted.map((update, i) => (
+                <div key={update.id} className="relative pl-7">
+                  {/* Dot */}
+                  <div className={`absolute left-0 top-1 w-[11px] h-[11px] rounded-full border-2 ${
+                    i === 0
+                      ? 'bg-[#064E3B] border-[#064E3B]'
+                      : 'bg-white border-[#064E3B]/30'
+                  }`} />
+
+                  {/* Badge for latest */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <p className="text-xs font-semibold text-gray-500">{formatDate(update.created_at)}</p>
+                    <span className="text-[10px] text-gray-400">{timeAgo(update.created_at)}</span>
+                    {i === 0 && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-[#064E3B] bg-[#064E3B]/10 rounded-full px-2 py-0.5">
+                        Latest
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {update.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state for non-creators */}
+        {sorted.length === 0 && !isCreator && (
+          <p className="text-sm text-gray-400 text-center py-2">No updates yet.</p>
+        )}
       </div>
     </div>
   )

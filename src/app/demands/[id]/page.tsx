@@ -263,7 +263,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
             )}
 
             {/* Creator updates */}
-            <CreatorUpdatesSection updates={creatorUpdates} creatorName={creatorName} />
+            <CreatorUpdatesSection updates={creatorUpdates} creatorName={creatorName} isCreator={isCreator} demandId={id} />
 
             {/* Related videos */}
             <RelatedVideosSection demandId={id} links={videoLinks} isCreator={isCreator} />
@@ -314,8 +314,6 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               <CreatorResolution demandId={id} />
             )}
 
-            {/* Creator: post an update */}
-            {isCreator && <CreatorUpdateForm demandId={id} />}
 
           </div>
 
