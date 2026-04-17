@@ -2,10 +2,10 @@ export default function NotFound() {
   return (
     <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-20">
       <div className="text-center max-w-sm">
-        <p className="text-6xl font-black text-[#064E3B] mb-4">404</p>
-        <h1 className="text-lg font-bold text-gray-900 mb-2">Page not found</h1>
+        <p className="text-7xl font-black text-[#064E3B] mb-2">404</p>
+        <h1 className="text-xl font-black text-gray-900 mb-2">VAR has disallowed this page.</h1>
         <p className="text-sm text-gray-500 mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          After careful review, the page you're looking for doesn't exist. No penalty awarded.
         </p>
         <a
           href="/"
