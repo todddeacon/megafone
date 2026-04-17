@@ -9,6 +9,8 @@ export interface AdminCampaign {
   moderation_status: string
   moderation_scores: Record<string, number> | null
   support_count_cache: number
+  is_featured: boolean
+  is_example: boolean
   created_at: string
   organisation: { name: string; slug: string } | null
   creator: { name: string | null } | null
@@ -30,6 +32,8 @@ export default async function AdminCampaignsPage() {
       moderation_status,
       moderation_scores,
       support_count_cache,
+      is_featured,
+      is_example,
       created_at,
       organisation:organisations(name, slug),
       creator:profiles(name)
@@ -43,6 +47,8 @@ export default async function AdminCampaignsPage() {
     moderation_status: d.moderation_status ?? 'approved',
     moderation_scores: d.moderation_scores as Record<string, number> | null,
     support_count_cache: d.support_count_cache ?? 0,
+    is_featured: d.is_featured ?? false,
+    is_example: d.is_example ?? false,
     created_at: d.created_at,
     organisation: Array.isArray(d.organisation) ? d.organisation[0] ?? null : d.organisation,
     creator: Array.isArray(d.creator) ? d.creator[0] ?? null : d.creator,

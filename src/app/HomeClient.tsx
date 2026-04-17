@@ -11,6 +11,7 @@ interface Demand {
   question_count: number
   created_at: string
   is_example: boolean
+  is_featured: boolean
   organisation: { id: string; name: string; slug: string } | null
   creator: { name: string } | null
 }
@@ -176,6 +177,10 @@ function FeaturedCard({ demand }: { demand: Demand }) {
             See how it works
           </span>
         </div>
+      ) : demand.is_featured ? (
+        <p className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest mb-3">
+          Featured campaign
+        </p>
       ) : (
         <p className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest mb-3">
           Trending right now
@@ -243,12 +248,6 @@ function Hero({ featured }: { featured: Demand | null }) {
                 className="rounded-lg bg-[#F59E0B] px-5 py-3 text-sm font-bold text-white hover:bg-[#D97706] transition-colors"
               >
                 Start a campaign
-              </a>
-              <a
-                href="#feed"
-                className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-              >
-                Browse campaigns
               </a>
             </div>
           </div>
@@ -359,10 +358,19 @@ export default function HomeClient({ demands, supportedIds }: Props) {
     return list
   }, [demands, tab, search, supportedSet])
 
-  // Highest-support campaign for the hero featured card
+  // Hero featured card: featured > example > highest support
   const featured = useMemo(() => {
-    const active = demands.filter((d) => ACTIVE_STATUSES.has(d.status))
-    const pool = active.length > 0 ? active : demands
+    // 1. Admin-selected featured campaign
+    const featuredCampaign = demands.find((d) => d.is_featured)
+    if (featuredCampaign) return featuredCampaign
+
+    // 2. Example campaign (fallback)
+    const exampleCampaign = demands.find((d) => d.is_example)
+    if (exampleCampaign) return exampleCampaign
+
+    // 3. Highest-support campaign
+    const active = demands.filter((d) => ACTIVE_STATUSES.has(d.status) && !d.is_example)
+    const pool = active.length > 0 ? active : demands.filter((d) => !d.is_example)
     return pool.reduce((best, d) =>
       d.support_count_cache > (best?.support_count_cache ?? -1) ? d : best,
       null as Demand | null

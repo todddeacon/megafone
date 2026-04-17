@@ -12,7 +12,7 @@ export const getCachedDemands = unstable_cache(
     const { data: demands } = await supabase
       .from('demands')
       .select(`
-        id, headline, status, support_count_cache, notification_threshold, created_at, creator_user_id, is_example, organisation_id,
+        id, headline, status, support_count_cache, notification_threshold, created_at, creator_user_id, is_example, is_featured, organisation_id,
         demand_questions(count)
       `)
       .eq('moderation_status', 'approved')

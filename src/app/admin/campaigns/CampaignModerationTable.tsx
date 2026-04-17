@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { deleteCampaignAsAdmin, approveCampaign, removeCampaign } from '../actions'
+import { deleteCampaignAsAdmin, approveCampaign, removeCampaign, setFeaturedCampaign, removeFeaturedCampaign } from '../actions'
 import type { AdminCampaign } from './page'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -195,6 +195,37 @@ function PendingReviewCard({ campaign }: { campaign: AdminCampaign }) {
   )
 }
 
+function FeatureButton({ campaignId, isFeatured }: { campaignId: string; isFeatured: boolean }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
+  function handleToggle() {
+    startTransition(async () => {
+      if (isFeatured) {
+        await removeFeaturedCampaign(campaignId)
+      } else {
+        await setFeaturedCampaign(campaignId)
+      }
+      router.refresh()
+    })
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={isPending}
+      className={`text-xs font-semibold transition-colors disabled:opacity-50 ${
+        isFeatured
+          ? 'text-amber-600 hover:text-amber-700'
+          : 'text-gray-300 hover:text-amber-500'
+      }`}
+    >
+      {isPending ? '...' : isFeatured ? 'Unfeature' : 'Feature'}
+    </button>
+  )
+}
+
 function CampaignRow({ campaign }: { campaign: AdminCampaign }) {
   return (
     <div className="flex items-start gap-4 py-4 border-b border-gray-100 last:border-0 group">
@@ -211,6 +242,16 @@ function CampaignRow({ campaign }: { campaign: AdminCampaign }) {
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLOURS[campaign.status] ?? 'bg-gray-100 text-gray-500'}`}>
             {STATUS_LABELS[campaign.status] ?? campaign.status}
           </span>
+          {campaign.is_featured && (
+            <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
+              Featured
+            </span>
+          )}
+          {campaign.is_example && (
+            <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-400">
+              Example
+            </span>
+          )}
           {campaign.moderation_status === 'removed' && (
             <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold bg-red-50 text-red-500">
               Removed
@@ -224,7 +265,8 @@ function CampaignRow({ campaign }: { campaign: AdminCampaign }) {
           {' · '}{formatDate(campaign.created_at)}
         </p>
       </div>
-      <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="shrink-0 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <FeatureButton campaignId={campaign.id} isFeatured={campaign.is_featured} />
         <DeleteButton campaignId={campaign.id} />
       </div>
     </div>

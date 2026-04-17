@@ -239,3 +239,46 @@ export async function logNotification(
   revalidatePath(`/demands/${demand_id}`)
   return { error: null, success: 'Notification logged successfully.' }
 }
+
+export async function setFeaturedCampaign(demandId: string): Promise<AdminActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
+
+  const admin = createAdminClient()
+
+  // Remove featured from all campaigns first
+  await admin.from('demands').update({ is_featured: false }).eq('is_featured', true)
+
+  // Set the new featured campaign
+  const { error } = await admin
+    .from('demands')
+    .update({ is_featured: true })
+    .eq('id', demandId)
+
+  if (error) return { error: 'Failed to feature campaign.' }
+
+  revalidatePath('/admin/campaigns')
+  revalidatePath('/')
+  return { error: null, success: 'Campaign is now featured on the home page.' }
+}
+
+export async function removeFeaturedCampaign(demandId: string): Promise<AdminActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('demands')
+    .update({ is_featured: false })
+    .eq('id', demandId)
+
+  if (error) return { error: 'Failed to remove featured status.' }
+
+  revalidatePath('/admin/campaigns')
+  revalidatePath('/')
+  return { error: null, success: 'Campaign removed from featured.' }
+}
