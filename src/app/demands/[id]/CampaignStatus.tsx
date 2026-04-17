@@ -144,9 +144,12 @@ export default function CampaignStatus({ status, createdAt, notifiedAt, responde
   const responseTime = notifiedAt && respondedAt ? daysBetween(notifiedAt, respondedAt) : null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-5">Campaign Progress</h2>
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Campaign Progress</h2>
+      </div>
 
+      <div className="p-6">
       <Step
         state={states[0]}
         label="Campaign Launched"
@@ -204,6 +207,7 @@ export default function CampaignStatus({ status, createdAt, notifiedAt, responde
           ) : undefined
         }
       />
+      </div>
     </div>
   )
 }

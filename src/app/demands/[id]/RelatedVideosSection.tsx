@@ -136,22 +136,24 @@ export default function RelatedVideosSection({ demandId, links, isCreator }: Pro
   if (links.length === 0 && !isCreator) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-        Related Content
-      </h2>
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Related Content</h2>
+      </div>
 
-      {links.length === 0 ? (
-        <p className="text-sm text-gray-400">No content added yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {links.map((link) => (
-            <ContentCard key={link.id} link={link} />
-          ))}
-        </div>
-      )}
+      <div className="p-6">
+        {links.length === 0 ? (
+          <p className="text-sm text-gray-400">No content added yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {links.map((link) => (
+              <ContentCard key={link.id} link={link} />
+            ))}
+          </div>
+        )}
 
-      {isCreator && <AddContentForm demandId={demandId} />}
+        {isCreator && <AddContentForm demandId={demandId} />}
+      </div>
     </div>
   )
 }

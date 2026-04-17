@@ -36,7 +36,7 @@ export default function CreatorUpdatesSection({ updates, creatorName }: Props) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">
           Updates by {creatorName ?? 'the creator'}
         </h2>

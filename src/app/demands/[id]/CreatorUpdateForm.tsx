@@ -24,14 +24,12 @@ export default function CreatorUpdateForm({ demandId }: Props) {
   }, [state.error, router])
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
-        Post an update
-      </h2>
-      <p className="text-xs text-gray-400 mb-4">
-        Share new information or context with supporters.
-      </p>
-      <form ref={formRef} action={formAction} className="space-y-3">
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Post an update</h2>
+        <p className="text-xs text-gray-400 mt-0.5">Share new information or context with supporters.</p>
+      </div>
+      <form ref={formRef} action={formAction} className="p-6 space-y-3">
         <textarea
           name="body"
           rows={3}
