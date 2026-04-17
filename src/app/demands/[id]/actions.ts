@@ -390,11 +390,7 @@ export async function addCreatorUpdate(
     .eq('id', demandId)
     .single()
 
-  if (demandReadError) {
-    console.error('[addCreatorUpdate] Demand read error:', demandReadError.message, 'demandId:', demandId)
-    return { error: `Could not load campaign. ${demandReadError.message}` }
-  }
-  if (!demand) return { error: 'Demand not found.' }
+  if (demandReadError || !demand) return { error: 'Demand not found.' }
   if (demand.creator_user_id !== user.id) return { error: 'Only the creator can post updates.' }
 
   const body = (formData.get('body') as string)?.trim()
@@ -486,11 +482,7 @@ export async function addDemandLink(
     .eq('id', demandId)
     .single()
 
-  if (demandReadError) {
-    console.error('[addDemandLink] Demand read error:', demandReadError.message, 'demandId:', demandId)
-    return { error: `Could not load campaign. ${demandReadError.message}` }
-  }
-  if (!demand) return { error: 'Demand not found.' }
+  if (demandReadError || !demand) return { error: 'Demand not found.' }
   if (demand.creator_user_id !== user.id) return { error: 'Only the creator can add content.' }
 
   const url = (formData.get('url') as string)?.trim()
