@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 
 export type EditDemandState = { error: string | null }
@@ -17,7 +18,8 @@ export async function updateDemand(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const admin = createAdminClient()
+  const { data: demand } = await admin
     .from('demands')
     .select('creator_user_id')
     .eq('id', demandId)
@@ -100,7 +102,8 @@ export async function deleteDemand(demandId: string): Promise<{ error: string } 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id')
     .eq('id', demandId)

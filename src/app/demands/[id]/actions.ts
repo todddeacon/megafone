@@ -317,7 +317,8 @@ export async function addFollowUpQuestion(
 
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id, status')
     .eq('id', demandId)
@@ -382,7 +383,8 @@ export async function addCreatorUpdate(
 
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
@@ -473,7 +475,8 @@ export async function addDemandLink(
 
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id, headline, organisation_id, threshold_notified_at, support_count_cache')
     .eq('id', demandId)
@@ -557,7 +560,8 @@ export async function setResolutionStatus(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id, status, headline, organisation_id, support_count_cache')
     .eq('id', demandId)
@@ -621,7 +625,8 @@ export async function postOfficialResponse(
 
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('organisation_id, headline, support_count_cache, creator_user_id')
     .eq('id', demandId)
@@ -754,7 +759,8 @@ export async function notifyOrgFollowUp(demandId: string): Promise<ActionState> 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
 
-  const { data: demand } = await supabase
+  const adminForRead = createAdminClient()
+  const { data: demand } = await adminForRead
     .from('demands')
     .select('creator_user_id, status, organisation_id, headline, support_count_cache')
     .eq('id', demandId)
