@@ -9,19 +9,23 @@ interface Props {
   creatorName: string | null
 }
 
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', {
-    weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
   })
 }
 
@@ -39,21 +43,40 @@ export default function CreatorUpdatesSection({ updates, creatorName }: Props) {
         <span className="text-xs font-semibold text-gray-400">{updates.length} {updates.length === 1 ? 'update' : 'updates'}</span>
       </div>
 
-      <div className="divide-y divide-gray-100">
-        {sorted.map((update) => (
-          <div key={update.id} className="px-6 py-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-gray-900">{formatDate(update.created_at)}</p>
-                <p className="text-xs text-gray-400">{formatTime(update.created_at)}</p>
+      <div className="px-6 py-5">
+        {/* Timeline */}
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-[#064E3B]/15 rounded-full" />
+
+          <div className="space-y-6">
+            {sorted.map((update, i) => (
+              <div key={update.id} className="relative pl-7">
+                {/* Dot */}
+                <div className={`absolute left-0 top-1 w-[11px] h-[11px] rounded-full border-2 ${
+                  i === 0
+                    ? 'bg-[#064E3B] border-[#064E3B]'
+                    : 'bg-white border-[#064E3B]/30'
+                }`} />
+
+                {/* Badge for latest */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500">{formatDate(update.created_at)}</p>
+                  <span className="text-[10px] text-gray-400">{timeAgo(update.created_at)}</span>
+                  {i === 0 && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#064E3B] bg-[#064E3B]/10 rounded-full px-2 py-0.5">
+                      Latest
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                  {update.body}
+                </p>
               </div>
-            </div>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line pl-3.5">
-              {update.body}
-            </p>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   )
