@@ -102,7 +102,15 @@ export async function signUp(
   if (!email || !password) return { error: 'Email and password are required.' }
   if (!name) return { error: 'Your name is required.' }
 
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${siteUrl}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`,
+    },
+  })
 
   if (error) return { error: friendlyAuthError(error.message) }
 

@@ -75,7 +75,15 @@ export async function signUpAndClaim(
   }
 
   // Create the account
-  const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
+  const { data, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${siteUrl}/auth/callback`,
+    },
+  })
 
   if (signUpError) return { error: signUpError.message }
 
