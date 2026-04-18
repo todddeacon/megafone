@@ -463,6 +463,75 @@ export async function addCreatorUpdate(
   return { error: null }
 }
 
+export async function editCreatorUpdate(
+  updateId: string,
+  demandId: string,
+  newBody: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const adminForRead = createAdminClient()
+  const { data: update } = await adminForRead
+    .from('demand_updates')
+    .select('author_user_id')
+    .eq('id', updateId)
+    .single()
+
+  if (!update) return { error: 'Update not found.' }
+  if (update.author_user_id !== user.id && !(await canActAsCreator(user.email))) {
+    return { error: 'Only the creator can edit this update.' }
+  }
+
+  const body = newBody.trim()
+  if (!body) return { error: 'Update cannot be empty.' }
+  if (body.length > 2000) return { error: 'Update must be under 2000 characters.' }
+
+  const { error } = await adminForRead
+    .from('demand_updates')
+    .update({ body })
+    .eq('id', updateId)
+
+  if (error) return { error: 'Failed to edit update.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
+export async function deleteCreatorUpdate(
+  updateId: string,
+  demandId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const adminForRead = createAdminClient()
+  const { data: update } = await adminForRead
+    .from('demand_updates')
+    .select('author_user_id')
+    .eq('id', updateId)
+    .single()
+
+  if (!update) return { error: 'Update not found.' }
+  if (update.author_user_id !== user.id && !(await canActAsCreator(user.email))) {
+    return { error: 'Only the creator can delete this update.' }
+  }
+
+  const { error } = await adminForRead
+    .from('demand_updates')
+    .delete()
+    .eq('id', updateId)
+
+  if (error) return { error: 'Failed to delete update.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
 export async function addDemandLink(
   demandId: string,
   prevState: ActionState,
