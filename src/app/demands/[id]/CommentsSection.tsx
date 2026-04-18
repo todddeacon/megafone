@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { postComment, deleteComment, setNickname } from './actions'
+import { postComment, deleteComment, editComment, setNickname } from './actions'
 
 interface Profile {
   id: string
@@ -16,6 +16,7 @@ interface Comment {
   user_id: string
   parent_comment_id: string | null
   created_at: string
+  updated_at: string | null
   profile: Profile | null
 }
 
@@ -209,8 +210,12 @@ function CommentRow({
 }) {
   const router = useRouter()
   const [showReplyForm, setShowReplyForm] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(comment.body)
   const [deletePending, startDelete] = useTransition()
+  const [editPending, startEdit] = useTransition()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function handleDelete() {
     if (!confirmDelete) { setConfirmDelete(true); return }
@@ -219,6 +224,21 @@ function CommentRow({
       router.refresh()
     })
   }
+
+  function handleEdit() {
+    setError(null)
+    startEdit(async () => {
+      const result = await editComment(comment.id, editText)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setEditing(false)
+        router.refresh()
+      }
+    })
+  }
+
+  const isEdited = !!comment.updated_at
 
   return (
     <div className="flex gap-3 group">
@@ -242,24 +262,75 @@ function CommentRow({
             </span>
           )}
           <span className="text-xs text-gray-400">{relativeTime(comment.created_at)}</span>
-          {isCurrentUser && (
-            <button
-              onClick={handleDelete}
-              disabled={deletePending}
-              className={`ml-auto text-[10px] font-semibold transition-colors opacity-0 group-hover:opacity-100 ${
-                confirmDelete ? 'text-red-500 opacity-100' : 'text-gray-400 hover:text-red-500'
-              }`}
-            >
-              {deletePending ? 'Deleting…' : confirmDelete ? 'Tap again to confirm' : 'Delete'}
-            </button>
+          {isEdited && (
+            <span className="text-[10px] text-gray-400 italic">(edited)</span>
           )}
         </div>
 
-        {/* Body */}
-        <p className="text-sm text-gray-700 leading-relaxed">{comment.body}</p>
+        {/* Body — editable */}
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={2}
+              maxLength={1000}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#064E3B] resize-none"
+            />
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleEdit}
+                disabled={editPending || !editText.trim()}
+                className="rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#065F46] disabled:opacity-50 transition-colors"
+              >
+                {editPending ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => { setEditing(false); setEditText(comment.body); setError(null) }}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-700 leading-relaxed">{comment.body}</p>
+
+            {/* Edit/delete buttons — own comments only */}
+            {isCurrentUser && (
+              <div className="mt-1.5 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setEditing(true)}
+                  className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deletePending}
+                  className={`text-[10px] font-semibold transition-colors ${
+                    confirmDelete ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+                  }`}
+                >
+                  {deletePending ? 'Deleting...' : confirmDelete ? 'Confirm delete' : 'Delete'}
+                </button>
+                {confirmDelete && (
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-[10px] text-gray-400 hover:text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         {/* Reply button — top-level only */}
-        {canReply && !isReply && (
+        {canReply && !isReply && !editing && (
           <button
             onClick={() => setShowReplyForm((v) => !v)}
             className="mt-1.5 text-xs font-semibold text-gray-400 hover:text-[#064E3B] transition-colors"

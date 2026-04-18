@@ -305,6 +305,40 @@ export async function deleteComment(commentId: string): Promise<ActionState> {
   return { error: null }
 }
 
+export async function editComment(
+  commentId: string,
+  newBody: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated.' }
+
+  const adminForRead = createAdminClient()
+  const { data: comment } = await adminForRead
+    .from('comments')
+    .select('user_id, demand_id')
+    .eq('id', commentId)
+    .single()
+
+  if (!comment) return { error: 'Comment not found.' }
+  if (comment.user_id !== user.id) return { error: 'You can only edit your own comments.' }
+
+  const body = newBody.trim()
+  if (!body) return { error: 'Comment cannot be empty.' }
+  if (body.length > 1000) return { error: 'Comment must be under 1000 characters.' }
+
+  const { error } = await adminForRead
+    .from('comments')
+    .update({ body, updated_at: new Date().toISOString() })
+    .eq('id', commentId)
+
+  if (error) return { error: 'Failed to edit comment.' }
+
+  revalidatePath(`/demands/${comment.demand_id}`)
+  revalidateTag(`demand-${comment.demand_id}`, { expire: 0 })
+  return { error: null }
+}
+
 export async function addFollowUpQuestion(
   demandId: string,
   prevState: ActionState,

@@ -74,7 +74,7 @@ export function getCachedDemand(id: string) {
       ] = await Promise.all([
         supabase
           .from('comments')
-          .select('id, body, user_id, parent_comment_id, created_at')
+          .select('id, body, user_id, parent_comment_id, created_at, updated_at')
           .eq('demand_id', id)
           .order('created_at', { ascending: false })
           .limit(200),
@@ -109,7 +109,7 @@ export function getCachedDemand(id: string) {
         (commenterProfilesResult.data ?? []).map((p: { id: string; name: string; nickname: string | null }) => [p.id, p])
       )
 
-      const comments = rawComments.map((c: { id: string; body: string; user_id: string; parent_comment_id: string | null; created_at: string }) => ({
+      const comments = rawComments.map((c: { id: string; body: string; user_id: string; parent_comment_id: string | null; created_at: string; updated_at: string | null }) => ({
         ...c,
         profile: commenterProfileMap[c.user_id] ?? null,
       }))
