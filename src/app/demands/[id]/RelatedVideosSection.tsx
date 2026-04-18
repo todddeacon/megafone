@@ -8,6 +8,7 @@ interface ContentLink {
   id: string
   url: string
   title: string
+  created_at: string
 }
 
 interface Props {
@@ -30,6 +31,29 @@ function getYouTubeId(url: string): string | null {
   } catch {
     return null
   }
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 5) return `${weeks}w ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
+
+function formatDate(ts: string) {
+  return new Date(ts).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 function ContentCard({ link }: { link: ContentLink }) {
@@ -70,11 +94,15 @@ function ContentCard({ link }: { link: ContentLink }) {
         </div>
       </div>
 
-      {/* Title */}
+      {/* Title + date */}
       <div className="px-3 py-2.5 bg-white">
         <p className="text-sm font-semibold text-[#064E3B] line-clamp-2 leading-snug">
           {link.title}
         </p>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-[10px] text-gray-400">{formatDate(link.created_at)}</p>
+          <span className="text-[10px] text-gray-300">{timeAgo(link.created_at)}</span>
+        </div>
       </div>
     </a>
   )
@@ -116,6 +144,9 @@ function AddContentForm({ demandId }: { demandId: string }) {
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
         />
       </div>
+      <p className="mt-1.5 text-xs text-amber-600">
+        All supporters of this campaign will be notified via email of new content.
+      </p>
       {state.error && (
         <p className="mt-1 text-xs text-red-600">{state.error}</p>
       )}
@@ -125,7 +156,7 @@ function AddContentForm({ demandId }: { demandId: string }) {
           disabled={isPending}
           className="rounded-lg bg-[#064E3B] px-4 py-2 text-sm font-semibold text-white hover:opacity-80 disabled:opacity-50 transition-opacity"
         >
-          {isPending ? 'Adding…' : 'Add'}
+          {isPending ? 'Adding...' : 'Add'}
         </button>
       </div>
     </form>
@@ -137,8 +168,11 @@ export default function RelatedVideosSection({ demandId, links, isCreator }: Pro
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
+      <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400">Related Content</h2>
+        {links.length > 0 && (
+          <span className="text-xs font-semibold text-gray-400">{links.length} {links.length === 1 ? 'item' : 'items'}</span>
+        )}
       </div>
 
       <div className="p-6">

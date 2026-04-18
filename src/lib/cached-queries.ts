@@ -85,9 +85,9 @@ export function getCachedDemand(id: string) {
           .order('created_at', { ascending: true }),
         supabase
           .from('demand_links')
-          .select('id, url, title')
+          .select('id, url, title, created_at')
           .eq('demand_id', id)
-          .order('created_at', { ascending: true }),
+          .order('created_at', { ascending: false }),
         supabase
           .from('organisation_notifications')
           .select('id, sent_at')
