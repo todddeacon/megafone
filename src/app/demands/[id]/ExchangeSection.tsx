@@ -114,21 +114,27 @@ function ResponseBlock({ response, orgName, isOrgRep, demandId }: { response: Of
 
   return (
     <div className="px-6 py-5 border-t border-emerald-100 bg-emerald-50/40">
-      {/* Timeline header */}
-      <div className="relative pl-7 mb-3">
+      <div className="relative pl-7">
+        {/* Timeline dot */}
         <div className="absolute left-0 top-1 w-[11px] h-[11px] rounded-full bg-emerald-500 border-2 border-emerald-500" />
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-            Response from {orgName}
-          </span>
-          <span className="text-[10px] text-gray-400">{formatDate(response.created_at)}</span>
+        {/* Vertical line */}
+        <div className="absolute left-[5px] top-3 bottom-0 w-0.5 bg-emerald-200 rounded-full" />
+
+        {/* Title */}
+        <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-1">
+          Response from {orgName}
+        </p>
+
+        {/* Date line — matching creator update style */}
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-xs font-semibold text-gray-500">{formatDate(response.created_at)}</p>
           <span className="text-[10px] text-gray-400">{timeAgo(response.created_at)}</span>
         </div>
       </div>
 
       {/* Response body */}
       <div className="relative pl-7">
-        {/* Vertical line */}
+        {/* Vertical line continued */}
         <div className="absolute left-[5px] top-0 bottom-0 w-0.5 bg-emerald-200 rounded-full" />
 
         {editing ? (
