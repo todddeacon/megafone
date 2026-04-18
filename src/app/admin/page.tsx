@@ -123,6 +123,7 @@ export default async function AdminPage() {
             { label: 'Emails', value: emailRegistry.length, href: '/admin/emails' },
             { label: 'Tech stack', value: 8, href: '/admin/tech-stack' },
             { label: 'Health check', value: 15, href: '/admin/health-check' },
+            { label: 'Org dashboard', value: '→', href: '/dashboard' },
           ].map(({ label, value, href }) => {
             const inner = (
               <>
