@@ -341,6 +341,23 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           <input type="hidden" name="organisation_id" value={organisationId} />
         </div>
 
+        {/* Target person or group */}
+        <div>
+          <label htmlFor="target_person" className={labelClass}>
+            Target person or group <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input
+            id="target_person"
+            name="target_person"
+            type="text"
+            placeholder="e.g. The Board, Director of Football, CEO"
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Who specifically at the organisation should see this campaign?
+          </p>
+        </div>
+
         {/* Summary */}
         <div>
           <label htmlFor="summary" className={labelClass}>
@@ -393,23 +410,6 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           >
             + Add another question
           </button>
-        </div>
-
-        {/* Target person or group */}
-        <div>
-          <label htmlFor="target_person" className={labelClass}>
-            Target person or group <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <input
-            id="target_person"
-            name="target_person"
-            type="text"
-            placeholder="e.g. The Board, Director of Football, CEO"
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            Who specifically at the organisation should see this campaign?
-          </p>
         </div>
 
         {/* Supporter target */}
