@@ -261,6 +261,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 orgName={orgName}
                 orgTarget={orgTarget}
                 isOrgRep={isOrgRep}
+                isCreator={isCreator}
               />
             )}
 

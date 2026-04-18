@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import OfficialResponseForm from './OfficialResponseForm'
-import { editOfficialResponse, deleteOfficialResponse } from './actions'
+import { editOfficialResponse, deleteOfficialResponse, editFollowUpQuestion, deleteFollowUpQuestion } from './actions'
 
 interface Question {
   id: string
@@ -27,6 +27,7 @@ interface Props {
   orgName: string
   orgTarget: string
   isOrgRep: boolean
+  isCreator: boolean
 }
 
 function timeAgo(iso: string): string {
@@ -221,10 +222,102 @@ function ResponseItem({ response, orgName, isOrgRep, demandId, isLatest }: { res
 
 const INITIAL_QUESTIONS = 2
 
-function QuestionsList({ questions, startIndex = 0, roundStyle = 'default' }: {
+function QuestionItem({ question, index, roundStyle, isCreator, demandId }: {
+  question: Question
+  index: number
+  roundStyle: 'default' | 'followup'
+  isCreator: boolean
+  demandId: string
+}) {
+  const router = useRouter()
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(question.body)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editPending, startEdit] = useTransition()
+  const [deletePending, startDelete] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  const isFollowUp = question.round > 1
+  const canEdit = isCreator && isFollowUp
+
+  function handleEdit() {
+    setError(null)
+    startEdit(async () => {
+      const result = await editFollowUpQuestion(question.id, demandId, editText)
+      if (result.error) setError(result.error)
+      else { setEditing(false); router.refresh() }
+    })
+  }
+
+  function handleDelete() {
+    setError(null)
+    startDelete(async () => {
+      const result = await deleteFollowUpQuestion(question.id, demandId)
+      if (result.error) { setError(result.error); setConfirmDelete(false) }
+      else router.refresh()
+    })
+  }
+
+  return (
+    <li className="flex gap-4 px-6 py-5 group">
+      <span
+        className={`shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 transition-colors ${
+          roundStyle === 'followup'
+            ? 'bg-amber-50 border border-amber-100 text-amber-600'
+            : 'bg-[#064E3B]/[0.06] text-[#064E3B] group-hover:bg-[#064E3B]/10'
+        }`}
+      >
+        {index}
+      </span>
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#064E3B]"
+            />
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button onClick={handleEdit} disabled={editPending || !editText.trim()} className="rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#065F46] disabled:opacity-50 transition-colors">
+                {editPending ? 'Saving...' : 'Save'}
+              </button>
+              <button onClick={() => { setEditing(false); setEditText(question.body); setError(null) }} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <span className="text-sm text-gray-800 leading-relaxed">{question.body}</span>
+            {canEdit && (
+              <div className="mt-1.5 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setEditing(true)} className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors">Edit</button>
+                {!confirmDelete ? (
+                  <button onClick={() => setConfirmDelete(true)} className="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition-colors">Delete</button>
+                ) : (
+                  <>
+                    <button onClick={handleDelete} disabled={deletePending} className="text-[10px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50">{deletePending ? 'Deleting...' : 'Confirm delete'}</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-[10px] text-gray-400 hover:text-gray-600">Cancel</button>
+                  </>
+                )}
+                {error && !editing && <span className="text-[10px] text-red-500">{error}</span>}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function QuestionsList({ questions, startIndex = 0, roundStyle = 'default', isCreator = false, demandId = '' }: {
   questions: Question[]
   startIndex?: number
   roundStyle?: 'default' | 'followup'
+  isCreator?: boolean
+  demandId?: string
 }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? questions : questions.slice(0, INITIAL_QUESTIONS)
@@ -234,18 +327,14 @@ function QuestionsList({ questions, startIndex = 0, roundStyle = 'default' }: {
     <>
       <ol className="divide-y divide-gray-100 list-none">
         {visible.map((q, i) => (
-          <li key={q.id} className="flex gap-4 px-6 py-5 group">
-            <span
-              className={`shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 transition-colors ${
-                roundStyle === 'followup'
-                  ? 'bg-amber-50 border border-amber-100 text-amber-600'
-                  : 'bg-[#064E3B]/[0.06] text-[#064E3B] group-hover:bg-[#064E3B]/10'
-              }`}
-            >
-              {startIndex + i + 1}
-            </span>
-            <span className="text-sm text-gray-800 leading-relaxed">{q.body}</span>
-          </li>
+          <QuestionItem
+            key={q.id}
+            question={q}
+            index={startIndex + i + 1}
+            roundStyle={roundStyle}
+            isCreator={isCreator}
+            demandId={demandId}
+          />
         ))}
       </ol>
       {!showAll && hidden > 0 && (
@@ -275,6 +364,7 @@ export default function ExchangeSection({
   orgName,
   orgTarget,
   isOrgRep,
+  isCreator,
 }: Props) {
   if (questions.length === 0 && !isOrgRep) return null
 
@@ -302,7 +392,7 @@ export default function ExchangeSection({
         </div>
 
         {sortedQuestions.length > 0 && (
-          <QuestionsList questions={sortedQuestions} />
+          <QuestionsList questions={sortedQuestions} isCreator={isCreator} demandId={demandId} />
         )}
 
       </div>
@@ -403,6 +493,8 @@ export default function ExchangeSection({
                 questions={roundQuestions}
                 startIndex={previousCount}
                 roundStyle={round === 1 ? 'default' : 'followup'}
+                isCreator={isCreator}
+                demandId={demandId}
               />
             )}
 

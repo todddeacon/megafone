@@ -417,6 +417,82 @@ export async function addFollowUpQuestions(
   return { error: null }
 }
 
+export async function editFollowUpQuestion(
+  questionId: string,
+  demandId: string,
+  newBody: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated.' }
+
+  const adminForRead = createAdminClient()
+  const { data: question } = await adminForRead
+    .from('demand_questions')
+    .select('author_user_id, is_followup')
+    .eq('id', questionId)
+    .single()
+
+  if (!question) return { error: 'Question not found.' }
+  if (!question.is_followup) return { error: 'Only follow-up questions can be edited.' }
+  if (question.author_user_id !== user.id && !(await canActAsCreator(user.email))) {
+    return { error: 'Only the creator can edit this question.' }
+  }
+
+  const body = newBody.trim()
+  if (!body) return { error: 'Question cannot be empty.' }
+
+  const profanityMatch = checkProfanity(body, 'campaign')
+  if (profanityMatch) return { error: 'Your question contains language that doesn\'t meet our community guidelines.' }
+
+  const moderation = await checkModeration(body)
+  if (moderation.action !== 'approve') return { error: 'Your question contains content that doesn\'t meet our community guidelines.' }
+
+  const { error } = await adminForRead
+    .from('demand_questions')
+    .update({ body })
+    .eq('id', questionId)
+
+  if (error) return { error: 'Failed to edit question.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
+export async function deleteFollowUpQuestion(
+  questionId: string,
+  demandId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated.' }
+
+  const adminForRead = createAdminClient()
+  const { data: question } = await adminForRead
+    .from('demand_questions')
+    .select('author_user_id, is_followup')
+    .eq('id', questionId)
+    .single()
+
+  if (!question) return { error: 'Question not found.' }
+  if (!question.is_followup) return { error: 'Only follow-up questions can be deleted.' }
+  if (question.author_user_id !== user.id && !(await canActAsCreator(user.email))) {
+    return { error: 'Only the creator can delete this question.' }
+  }
+
+  const { error } = await adminForRead
+    .from('demand_questions')
+    .delete()
+    .eq('id', questionId)
+
+  if (error) return { error: 'Failed to delete question.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
 export async function addCreatorUpdate(
   demandId: string,
   prevState: ActionState,
