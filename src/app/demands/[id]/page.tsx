@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCachedDemand } from '@/lib/cached-queries'
 
@@ -101,10 +102,36 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
       : Promise.resolve({ data: null }),
   ])
 
-  const isSupporter = !!supportResult.data
-  const isCreator = user?.id === demand.creator_user_id
-  const isOrgRep = !!orgRepResult.data
+  let isSupporter = !!supportResult.data
+  let isCreator = user?.id === demand.creator_user_id
+  let isOrgRep = !!orgRepResult.data
   const hasNickname = !!(currentUserProfileResult.data?.nickname)
+
+  // Admin "view as" mode — override role flags
+  const isAdmin = user?.email === process.env.ADMIN_EMAIL
+  if (isAdmin) {
+    const cookieStore = await cookies()
+    const viewMode = cookieStore.get('admin_view_mode')?.value
+
+    if (viewMode === 'admin') {
+      // See everything
+      isCreator = true
+      isOrgRep = true
+      isSupporter = true
+    } else if (viewMode === 'creator') {
+      isCreator = true
+      isOrgRep = false
+      isSupporter = true
+    } else if (viewMode === 'org_rep') {
+      isCreator = false
+      isOrgRep = true
+      isSupporter = true
+    } else if (viewMode === 'fan') {
+      isCreator = false
+      isOrgRep = false
+      isSupporter = true
+    }
+  }
 
   // Fetch all org rep user IDs for this org (for comment badges)
   const adminForReps = (await import('@/lib/supabase/admin')).createAdminClient()

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import AdminToolbarWrapper from "@/components/AdminToolbarWrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -41,6 +43,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <NavBar />
         {children}
+        <Suspense>
+          <AdminToolbarWrapper />
+        </Suspense>
       </body>
     </html>
   );
