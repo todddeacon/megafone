@@ -292,8 +292,8 @@ export default function SupportButton({
               </div>
               <p className="mt-1.5 text-xs text-emerald-400">
                 {thresholdReached
-                  ? 'Target reached — the organisation has been notified'
-                  : `${(notificationThreshold - optimisticCount).toLocaleString('en-GB')} more to notify the organisation`}
+                  ? `Target reached — ${orgName} has been notified`
+                  : `${(notificationThreshold - optimisticCount).toLocaleString('en-GB')} more to notify ${orgName}`}
               </p>
             </div>
           )}
