@@ -17,6 +17,8 @@ interface OfficialResponse {
   body: string | null
   pdf_url: string | null
   video_url: string | null
+  link_url: string | null
+  link_title: string | null
   created_at: string
 }
 
@@ -78,6 +80,19 @@ function ResponseAttachments({ response }: { response: OfficialResponse }) {
             className="w-full max-h-80 bg-black"
           />
         </div>
+      )}
+      {response.link_url && (
+        <a
+          href={response.link_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 bg-white text-xs font-semibold text-emerald-700 hover:border-emerald-400 transition-colors"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          {response.link_title || 'View linked content'}
+        </a>
       )}
     </>
   )

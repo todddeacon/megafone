@@ -80,7 +80,7 @@ export function getCachedDemand(id: string) {
           .limit(200),
         supabase
           .from('demand_updates')
-          .select('id, type, body, pdf_url, video_url, created_at')
+          .select('id, type, body, pdf_url, video_url, link_url, link_title, created_at')
           .eq('demand_id', id)
           .order('created_at', { ascending: true }),
         supabase

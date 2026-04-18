@@ -15,6 +15,7 @@ export default function OfficialResponseForm({ demandId }: Props) {
   const [state, formAction, isPending] = useActionState(boundAction, { error: null })
   const [showPdf, setShowPdf] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [showLink, setShowLink] = useState(false)
 
   const prevError = useRef(state.error)
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function OfficialResponseForm({ demandId }: Props) {
       formRef.current?.reset()
       setShowPdf(false)
       setShowVideo(false)
+      setShowLink(false)
       router.refresh()
     }
     prevError.current = state.error
@@ -73,6 +75,20 @@ export default function OfficialResponseForm({ demandId }: Props) {
           </svg>
           Attach video
         </button>
+        <button
+          type="button"
+          onClick={() => setShowLink((v) => !v)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+            showLink
+              ? 'bg-green-700 text-white border-green-700'
+              : 'bg-white text-green-700 border-green-300 hover:bg-green-50'
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          Add link
+        </button>
       </div>
 
       {showPdf && (
@@ -96,6 +112,23 @@ export default function OfficialResponseForm({ demandId }: Props) {
             className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-green-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-green-800"
           />
           <p className="text-xs text-gray-400">Video file, max 100 MB</p>
+        </div>
+      )}
+
+      {showLink && (
+        <div className="space-y-2">
+          <input
+            name="link_title"
+            type="text"
+            placeholder="Link title (e.g. Official statement)"
+            className="w-full rounded-lg border border-green-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <input
+            name="link_url"
+            type="url"
+            placeholder="https://…"
+            className="w-full rounded-lg border border-green-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
         </div>
       )}
 

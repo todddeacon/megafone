@@ -907,12 +907,19 @@ export async function postOfficialResponse(
   const body = (formData.get('body') as string)?.trim() || null
   const pdfFile = formData.get('pdf') as File | null
   const videoFile = formData.get('video') as File | null
+  const linkUrl = (formData.get('link_url') as string)?.trim() || null
+  const linkTitle = (formData.get('link_title') as string)?.trim() || null
 
   const hasPdf = pdfFile && pdfFile.size > 0
   const hasVideo = videoFile && videoFile.size > 0
+  const hasLink = !!linkUrl
 
-  if (!body && !hasPdf && !hasVideo) {
-    return { error: 'Please type a response, upload a PDF, or attach a video.' }
+  if (!body && !hasPdf && !hasVideo && !hasLink) {
+    return { error: 'Please type a response, upload a PDF, attach a video, or add a link.' }
+  }
+
+  if (hasLink) {
+    try { new URL(linkUrl) } catch { return { error: 'Please enter a valid URL.' } }
   }
 
   if (body && body.length > 3000) return { error: 'Response must be under 3000 characters.' }
@@ -959,7 +966,7 @@ export async function postOfficialResponse(
 
   const { error: insertError } = await supabase
     .from('demand_updates')
-    .insert({ demand_id: demandId, author_user_id: user.id, type: 'official_response', body: body ?? '', pdf_url, video_url })
+    .insert({ demand_id: demandId, author_user_id: user.id, type: 'official_response', body: body ?? '', pdf_url, video_url, link_url: linkUrl, link_title: linkTitle })
 
   if (insertError) return { error: 'Failed to post response. Please try again.' }
 

@@ -142,7 +142,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
     .eq('organisation_id', demand.organisation_id)
   const orgRepUserIds = new Set((orgRepUsers ?? []).map((r) => r.user_id))
 
-  const officialResponses = (updates as { id: string; type: string; body: string; pdf_url: string | null; video_url: string | null; created_at: string }[])
+  const officialResponses = (updates as { id: string; type: string; body: string; pdf_url: string | null; video_url: string | null; link_url: string | null; link_title: string | null; created_at: string }[])
     .filter((u) => u.type === 'official_response')
   const hasResponse = officialResponses.length > 0
 
