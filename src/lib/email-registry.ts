@@ -168,6 +168,49 @@ export const emailRegistry: EmailDefinition[] = [
     source: 'src/app/demands/[id]/actions.ts → notifyOrgFollowUp()',
   },
 
+  // ── Organisation suggestion emails ─────────────────────────────
+
+  {
+    id: 'org-suggestion-pending',
+    name: 'Organisation suggestion under review',
+    description: 'Sent to the campaign creator when they suggest a new organisation. Confirms their campaign will go live once the org is approved.',
+    trigger: 'A campaign creator suggests a new organisation during campaign creation.',
+    recipients: 'The campaign creator',
+    sender: 'megafone',
+    audience: 'creators',
+    source: 'src/app/demands/new/actions.ts → createDemand()',
+  },
+  {
+    id: 'org-suggestion-admin',
+    name: 'New organisation suggested (admin)',
+    description: 'Notifies the admin that a new organisation has been suggested, with contact details if provided.',
+    trigger: 'A campaign creator suggests a new organisation during campaign creation.',
+    recipients: 'Admin',
+    sender: 'megafone',
+    audience: 'organisations',
+    source: 'src/app/demands/new/actions.ts → createDemand()',
+  },
+  {
+    id: 'org-approved',
+    name: 'Organisation approved — campaign live',
+    description: 'Sent to the campaign creator when the admin approves their suggested organisation. Their campaign is now live.',
+    trigger: 'Admin approves a pending organisation.',
+    recipients: 'The campaign creator(s)',
+    sender: 'megafone',
+    audience: 'creators',
+    source: 'src/app/admin/actions.ts → approveOrganisation()',
+  },
+  {
+    id: 'org-rejected',
+    name: 'Organisation suggestion rejected',
+    description: 'Sent to the campaign creator when the admin rejects their suggested organisation.',
+    trigger: 'Admin rejects a pending organisation.',
+    recipients: 'The campaign creator(s)',
+    sender: 'megafone',
+    audience: 'creators',
+    source: 'src/app/admin/actions.ts → rejectOrganisation()',
+  },
+
   // ── Auth emails (managed by Supabase) ─────────────────────────
 
   {

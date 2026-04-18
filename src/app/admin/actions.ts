@@ -240,6 +240,125 @@ export async function logNotification(
   return { error: null, success: 'Notification logged successfully.' }
 }
 
+export async function approveOrganisation(orgId: string): Promise<AdminActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
+
+  const admin = createAdminClient()
+
+  // Get the org details
+  const { data: org } = await admin
+    .from('organisations')
+    .select('id, name, suggested_contact_name, suggested_contact_email')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'Organisation not found.' }
+
+  // Mark org as not pending
+  await admin.from('organisations').update({ is_pending: false }).eq('id', orgId)
+
+  // Add contact to notification emails if provided
+  if (org.suggested_contact_email) {
+    await admin.from('organisation_notification_emails').upsert(
+      {
+        organisation_id: orgId,
+        email: org.suggested_contact_email.toLowerCase(),
+        label: org.suggested_contact_name,
+        source: 'suggestion',
+      },
+      { onConflict: 'organisation_id, email', ignoreDuplicates: true }
+    )
+  }
+
+  // Approve all pending campaigns for this org
+  const { data: pendingCampaigns } = await admin
+    .from('demands')
+    .select('id, headline, creator_user_id')
+    .eq('organisation_id', orgId)
+    .eq('moderation_status', 'pending_org')
+
+  if (pendingCampaigns) {
+    await admin
+      .from('demands')
+      .update({ moderation_status: 'approved' })
+      .eq('organisation_id', orgId)
+      .eq('moderation_status', 'pending_org')
+
+    // Email each creator
+    const { sendOrgApprovedEmail } = await import('@/lib/email')
+    for (const campaign of pendingCampaigns) {
+      const creatorAuth = await admin.auth.admin.getUserById(campaign.creator_user_id)
+      const creatorEmail = creatorAuth.data?.user?.email
+      if (creatorEmail) {
+        try {
+          await sendOrgApprovedEmail({
+            to: creatorEmail,
+            orgName: org.name,
+            demandHeadline: campaign.headline,
+            demandId: campaign.id,
+          })
+        } catch (e) {
+          console.error('[approveOrganisation] Email error:', e)
+        }
+      }
+    }
+  }
+
+  revalidatePath('/admin/campaigns')
+  revalidatePath('/admin')
+  return { error: null, success: `${org.name} approved — ${pendingCampaigns?.length ?? 0} campaign(s) now live.` }
+}
+
+export async function rejectOrganisation(orgId: string): Promise<AdminActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user?.email || !isAdmin(user.email)) return { error: 'Access denied.' }
+
+  const admin = createAdminClient()
+
+  const { data: org } = await admin
+    .from('organisations')
+    .select('id, name')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'Organisation not found.' }
+
+  // Email creators of pending campaigns
+  const { data: pendingCampaigns } = await admin
+    .from('demands')
+    .select('id, creator_user_id')
+    .eq('organisation_id', orgId)
+    .eq('moderation_status', 'pending_org')
+
+  if (pendingCampaigns) {
+    const { sendOrgRejectedEmail } = await import('@/lib/email')
+    for (const campaign of pendingCampaigns) {
+      const creatorAuth = await admin.auth.admin.getUserById(campaign.creator_user_id)
+      const creatorEmail = creatorAuth.data?.user?.email
+      if (creatorEmail) {
+        try {
+          await sendOrgRejectedEmail({ to: creatorEmail, orgName: org.name })
+        } catch (e) {
+          console.error('[rejectOrganisation] Email error:', e)
+        }
+      }
+    }
+  }
+
+  // Delete pending campaigns and the org
+  await admin.from('demands').delete().eq('organisation_id', orgId).eq('moderation_status', 'pending_org')
+  await admin.from('organisations').delete().eq('id', orgId)
+
+  revalidatePath('/admin/campaigns')
+  revalidatePath('/admin')
+  return { error: null, success: `${org.name} rejected and removed.` }
+}
+
 export async function setFeaturedCampaign(demandId: string): Promise<AdminActionState> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

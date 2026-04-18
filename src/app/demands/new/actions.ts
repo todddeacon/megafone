@@ -2,7 +2,9 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
+import { sendOrgSuggestionPendingEmail, sendOrgSuggestionAdminEmail } from '@/lib/email'
 
 export type CreateDemandState = { error: string | null }
 
@@ -21,7 +23,11 @@ export async function createDemand(
   }
 
   const headline = (formData.get('headline') as string)?.trim()
-  const organisation_id = formData.get('organisation_id') as string
+  let organisation_id = (formData.get('organisation_id') as string) || null
+  const suggestNewOrg = formData.get('suggest_new_org') === 'true'
+  const newOrgName = (formData.get('new_org_name') as string)?.trim() || null
+  const newOrgContactName = (formData.get('new_org_contact_name') as string)?.trim() || null
+  const newOrgContactEmail = (formData.get('new_org_contact_email') as string)?.trim() || null
   const summary = (formData.get('summary') as string)?.trim()
   const questions = (formData.getAll('question') as string[]).filter((q) => q.trim())
   const target_person = (formData.get('target_person') as string)?.trim() || null
@@ -29,10 +35,36 @@ export async function createDemand(
   const notification_threshold = thresholdRaw ? parseInt(thresholdRaw, 10) : null
 
   if (!headline) return { error: 'Headline is required.' }
-  if (!organisation_id) return { error: 'Target organisation is required.' }
+  if (!organisation_id && !suggestNewOrg) return { error: 'Target organisation is required.' }
+  if (suggestNewOrg && !newOrgName) return { error: 'Organisation name is required.' }
   if (!summary) return { error: 'Summary is required.' }
   if (questions.length === 0) return { error: 'At least one question is required.' }
   if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
+
+  // If suggesting a new org, create it as pending
+  let isPendingOrg = false
+  if (suggestNewOrg && newOrgName) {
+    const admin = createAdminClient()
+    const slug = newOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+    const { data: newOrg, error: orgError } = await admin
+      .from('organisations')
+      .insert({
+        name: newOrgName,
+        slug: slug + '-' + Date.now().toString(36),
+        type: 'other',
+        is_pending: true,
+        suggested_by: user.id,
+        suggested_contact_name: newOrgContactName,
+        suggested_contact_email: newOrgContactEmail,
+      })
+      .select('id')
+      .single()
+
+    if (orgError || !newOrg) return { error: 'Failed to suggest organisation. Please try again.' }
+    organisation_id = newOrg.id
+    isPendingOrg = true
+  }
 
   // Profanity check (runs first, no API call needed)
   const textToCheck = [headline, summary, ...questions].join('\n')
@@ -48,9 +80,11 @@ export async function createDemand(
     return { error: 'Your campaign contains content that doesn\'t meet our community guidelines. Please review and resubmit.' }
   }
 
-  const moderation_status = moderation.action === 'review' ? 'pending_review' : 'approved'
+  let moderation_status = moderation.action === 'review' ? 'pending_review' : 'approved'
+  if (isPendingOrg) moderation_status = 'pending_org'
 
-  const { data: demand, error: demandError } = await supabase
+  const admin = createAdminClient()
+  const { data: demand, error: demandError } = await admin
     .from('demands')
     .insert({
       organisation_id,
@@ -94,6 +128,37 @@ export async function createDemand(
 
   if (linkRows.length > 0) {
     await supabase.from('demand_links').insert(linkRows)
+  }
+
+  // Send emails for pending org suggestions
+  if (isPendingOrg && newOrgName) {
+    try {
+      // Email creator
+      if (user.email) {
+        await sendOrgSuggestionPendingEmail({
+          to: user.email,
+          orgName: newOrgName,
+          demandHeadline: headline,
+        })
+      }
+
+      // Email admin
+      const adminEmail = process.env.ADMIN_EMAIL
+      if (adminEmail) {
+        const { data: creatorProfile } = await supabase.from('profiles').select('name').eq('id', user.id).maybeSingle()
+        await sendOrgSuggestionAdminEmail({
+          to: adminEmail,
+          creatorName: creatorProfile?.name ?? user.email ?? 'A user',
+          orgName: newOrgName,
+          orgType: 'other',
+          contactName: newOrgContactName,
+          contactEmail: newOrgContactEmail,
+          demandHeadline: headline,
+        })
+      }
+    } catch (emailError) {
+      console.error('[createDemand] Org suggestion email error:', emailError)
+    }
   }
 
   redirect(`/demands/${demand.id}`)

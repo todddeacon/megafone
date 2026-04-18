@@ -267,6 +267,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
   // Controlled field state — needed to populate the preview
   const [headline, setHeadline] = useState('')
   const [organisationId, setOrganisationId] = useState('')
+  const [suggestNewOrg, setSuggestNewOrg] = useState(false)
   const [summary, setSummary] = useState('')
   const [threshold, setThreshold] = useState('')
   const [questions, setQuestions] = useState([''])
@@ -280,7 +281,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
 
   function handlePreview() {
     if (!headline.trim()) return setValidationError('Headline is required.')
-    if (!organisationId) return setValidationError('Target organisation is required.')
+    if (!organisationId && !suggestNewOrg) return setValidationError('Target organisation is required.')
     if (!summary.trim()) return setValidationError('Summary is required.')
     if (filledQuestions.length === 0) return setValidationError('At least one question is required.')
     if (!threshold || parseInt(threshold) < 1) return setValidationError('Supporter target is required.')
@@ -332,13 +333,58 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           <label className={labelClass}>
             Target organisation <span className="text-[#F59E0B]">*</span>
           </label>
-          <OrgSearchSelect
-            organisations={organisations}
-            value={organisationId}
-            onChange={setOrganisationId}
-          />
-          {/* Hidden input so the value is included in FormData */}
-          <input type="hidden" name="organisation_id" value={organisationId} />
+          {!suggestNewOrg ? (
+            <>
+              <OrgSearchSelect
+                organisations={organisations}
+                value={organisationId}
+                onChange={setOrganisationId}
+              />
+              <input type="hidden" name="organisation_id" value={organisationId} />
+              <button
+                type="button"
+                onClick={() => { setSuggestNewOrg(true); setOrganisationId('') }}
+                className="mt-2 text-xs text-gray-400 hover:text-[#064E3B] transition-colors underline"
+              >
+                Can't find your organisation? Suggest a new one
+              </button>
+            </>
+          ) : (
+            <>
+              <input type="hidden" name="suggest_new_org" value="true" />
+              <input
+                name="new_org_name"
+                type="text"
+                required
+                placeholder="Organisation name"
+                className={inputClass}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                <input
+                  name="new_org_contact_name"
+                  type="text"
+                  placeholder="Contact name (optional)"
+                  className={inputClass}
+                />
+                <input
+                  name="new_org_contact_email"
+                  type="email"
+                  placeholder="Contact email (optional)"
+                  className={inputClass}
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                Your campaign will go live once we verify this organisation. This usually takes less than 24 hours.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSuggestNewOrg(false)}
+                className="mt-2 text-xs text-gray-400 hover:text-[#064E3B] transition-colors underline"
+              >
+                Search existing organisations instead
+              </button>
+            </>
+          )}
         </div>
 
         {/* Target person or group */}

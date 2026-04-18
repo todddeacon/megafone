@@ -16,6 +16,7 @@ export default async function NewDemandPage() {
   const { data: organisations } = await supabase
     .from('organisations')
     .select('id, name, slug, type, logo_url, is_claimed')
+    .neq('is_pending', true)
     .order('name')
 
   return (

@@ -1308,6 +1308,183 @@ export async function sendCreatorWeeklyDigestEmail({
   await sendSingle(apiKey, to, `Weekly update for your campaign — ${demandHeadline}`, html)
 }
 
+// ── Org Suggestion Emails ────────────────────────────────────────────────────
+
+export async function sendOrgSuggestionPendingEmail({
+  to,
+  orgName,
+  demandHeadline,
+}: {
+  to: string
+  orgName: string
+  demandHeadline: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Under review
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      Your organisation suggestion is under review
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      You've suggested <strong style="color: #064e3b;">${escapeHtml(orgName)}</strong> be added to Megafone. We're reviewing your request and will let you know once it's approved.
+    </p>
+
+    <p style="margin: 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Your campaign <strong style="color: #064e3b;">&ldquo;${escapeHtml(demandHeadline)}&rdquo;</strong> will go live as soon as the organisation is verified.
+    </p>`
+
+  const html = emailShell(
+    'Your organisation suggestion is under review',
+    body,
+    `You received this because you created a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
+  )
+
+  await sendSingle(apiKey, to, 'Your organisation suggestion is under review', html)
+}
+
+export async function sendOrgSuggestionAdminEmail({
+  to,
+  creatorName,
+  orgName,
+  orgType,
+  contactName,
+  contactEmail,
+  demandHeadline,
+}: {
+  to: string
+  creatorName: string
+  orgName: string
+  orgType: string
+  contactName: string | null
+  contactEmail: string | null
+  demandHeadline: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
+  const contactHtml = contactName || contactEmail
+    ? `<p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">Contact provided: <strong>${escapeHtml(contactName ?? 'Not provided')}</strong>${contactEmail ? ` — ${escapeHtml(contactEmail)}` : ''}</p>`
+    : `<p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">No contact details provided.</p>`
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      New organisation suggested
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(orgName)}
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      <strong>${escapeHtml(creatorName)}</strong> has suggested adding <strong style="color: #064e3b;">${escapeHtml(orgName)}</strong> (${escapeHtml(orgType)}) while creating a campaign.
+    </p>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Campaign headline: <strong style="color: #064e3b;">&ldquo;${escapeHtml(demandHeadline)}&rdquo;</strong>
+    </p>
+
+    ${contactHtml}
+
+    ${ctaButton(`${siteUrl}/admin/campaigns`, 'Review in admin →')}`
+
+  const html = emailShell(
+    `New organisation suggested: ${escapeHtml(orgName)}`,
+    body,
+    `You received this because you are the Megafone admin.`
+  )
+
+  await sendSingle(apiKey, to, `New organisation suggested: ${orgName}`, html)
+}
+
+export async function sendOrgApprovedEmail({
+  to,
+  orgName,
+  demandHeadline,
+  demandId,
+}: {
+  to: string
+  orgName: string
+  demandHeadline: string
+  demandId: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://megafone.app'
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Your campaign is live
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      ${escapeHtml(orgName)} is now on Megafone
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      Great news — <strong style="color: #064e3b;">${escapeHtml(orgName)}</strong> has been verified and your campaign is now live on Megafone. Share it with friends to start building support.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-left: 4px solid #064e3b; border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 16px; font-weight: 700; color: #064e3b; line-height: 1.4;">
+        ${escapeHtml(demandHeadline)}
+      </p>
+    </div>
+
+    ${ctaButton(`${siteUrl}/demands/${demandId}`, 'View your campaign →')}`
+
+  const html = emailShell(
+    `${escapeHtml(orgName)} is now on Megafone — your campaign is live!`,
+    body,
+    `You received this because you created a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
+  )
+
+  await sendSingle(apiKey, to, `${orgName} is now on Megafone — your campaign is live!`, html)
+}
+
+export async function sendOrgRejectedEmail({
+  to,
+  orgName,
+}: {
+  to: string
+  orgName: string
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return
+
+  const body = `
+    <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+      Organisation review
+    </p>
+
+    <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 800; color: #064e3b; line-height: 1.2;">
+      Update on your organisation suggestion
+    </h1>
+
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      We weren't able to add <strong style="color: #064e3b;">${escapeHtml(orgName)}</strong> to Megafone at this time. This may be because the organisation doesn't meet our current criteria or already exists under a different name.
+    </p>
+
+    <p style="margin: 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+      If you have questions, please contact us at <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.
+    </p>`
+
+  const html = emailShell(
+    'Update on your organisation suggestion',
+    body,
+    `You received this because you created a campaign on Megafone. Questions? Email <a href="mailto:hello@megafone.app" style="color: #064e3b;">hello@megafone.app</a>.`
+  )
+
+  await sendSingle(apiKey, to, 'Update on your organisation suggestion', html)
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CampaignModerationTable from './CampaignModerationTable'
+import PendingOrganisations from './PendingOrganisations'
 
 export interface AdminCampaign {
   id: string
@@ -55,7 +56,15 @@ export default async function AdminCampaignsPage() {
   }))
 
   const pendingReview = campaigns.filter((c) => c.moderation_status === 'pending_review')
-  const approved = campaigns.filter((c) => c.moderation_status !== 'pending_review')
+  const pendingOrg = campaigns.filter((c) => c.moderation_status === 'pending_org')
+  const approved = campaigns.filter((c) => c.moderation_status !== 'pending_review' && c.moderation_status !== 'pending_org')
+
+  // Fetch pending organisations
+  const { data: pendingOrgs } = await supabase
+    .from('organisations')
+    .select('id, name, type, suggested_contact_name, suggested_contact_email, created_at')
+    .eq('is_pending', true)
+    .order('created_at', { ascending: false })
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
@@ -69,8 +78,14 @@ export default async function AdminCampaignsPage() {
             ← Back to admin
           </a>
           <h1 className="text-3xl font-black tracking-tight text-[#064E3B]">Campaigns</h1>
-          <p className="mt-1 text-sm text-gray-500">{campaigns.length} total · {pendingReview.length} awaiting review</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {campaigns.length} total
+            {pendingReview.length > 0 && ` · ${pendingReview.length} awaiting review`}
+            {(pendingOrgs?.length ?? 0) > 0 && ` · ${pendingOrgs?.length} pending org approval`}
+          </p>
         </div>
+
+        <PendingOrganisations orgs={(pendingOrgs ?? []) as { id: string; name: string; type: string; suggested_contact_name: string | null; suggested_contact_email: string | null; created_at: string }[]} />
 
         <CampaignModerationTable campaigns={approved} pendingReview={pendingReview} />
 
