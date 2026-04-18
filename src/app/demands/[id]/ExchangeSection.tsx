@@ -226,7 +226,9 @@ export default function ExchangeSection({
     const sortedQuestions = [...questions].sort((a, b) =>
       a.created_at.localeCompare(b.created_at)
     )
-    const response = officialResponses[0] ?? null
+    const sortedResponses = [...officialResponses].sort((a, b) =>
+      a.created_at.localeCompare(b.created_at)
+    )
 
     return (
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -252,7 +254,9 @@ export default function ExchangeSection({
           </ol>
         )}
 
-        {response && <ResponseBlock response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />}
+        {sortedResponses.map((response) => (
+          <ResponseBlock key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />
+        ))}
 
         {isOrgRep && (
           <div className="border-t border-gray-100">
@@ -273,8 +277,17 @@ export default function ExchangeSection({
           .filter((q) => q.round === round)
           .sort((a, b) => a.created_at.localeCompare(b.created_at))
         const previousCount = questions.filter((q) => q.round < round).length
-        const response = officialResponses[round - 1] ?? null
-        const isActiveRound = !response
+
+        // Get responses that fall within this round's time window
+        const roundStart = roundQuestions[0]?.created_at ?? '0'
+        const nextRoundStart = round < maxRound
+          ? questions.filter((q) => q.round === round + 1).sort((a, b) => a.created_at.localeCompare(b.created_at))[0]?.created_at
+          : null
+        const roundResponses = officialResponses
+          .filter((r) => r.created_at >= roundStart && (!nextRoundStart || r.created_at < nextRoundStart))
+          .sort((a, b) => a.created_at.localeCompare(b.created_at))
+
+        const isLatestRound = round === maxRound
         const roundLabel =
           round === 1 ? 'Round 1 — Initial questions' : `Round ${round} — Follow-up questions`
 
@@ -282,28 +295,28 @@ export default function ExchangeSection({
           <div key={round} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div
               className={`px-6 py-3.5 border-b flex items-center justify-between ${
-                isActiveRound
+                isLatestRound && roundResponses.length === 0
                   ? 'bg-[#064E3B] border-[#064E3B]'
                   : 'bg-gray-50 border-gray-200'
               }`}
             >
               <span
                 className={`text-xs font-bold uppercase tracking-widest ${
-                  isActiveRound ? 'text-emerald-200' : 'text-gray-500'
+                  isLatestRound && roundResponses.length === 0 ? 'text-emerald-200' : 'text-gray-500'
                 }`}
               >
                 {roundLabel}
               </span>
-              {isActiveRound ? (
+              {isLatestRound && roundResponses.length === 0 ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Awaiting response
                 </span>
-              ) : (
-                response && (
-                  <span className="text-xs text-gray-400">{formatDate(response.created_at)}</span>
-                )
-              )}
+              ) : roundResponses.length > 0 ? (
+                <span className="text-xs text-gray-400">
+                  {roundResponses.length} {roundResponses.length === 1 ? 'response' : 'responses'}
+                </span>
+              ) : null}
             </div>
 
             {roundQuestions.length > 0 && (
@@ -325,9 +338,11 @@ export default function ExchangeSection({
               </ol>
             )}
 
-            {response && <ResponseBlock response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />}
+            {roundResponses.map((response) => (
+              <ResponseBlock key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />
+            ))}
 
-            {isOrgRep && isActiveRound && round === maxRound && (
+            {isOrgRep && isLatestRound && (
               <div className="border-t border-gray-100">
                 <OfficialResponseForm demandId={demandId} />
               </div>
