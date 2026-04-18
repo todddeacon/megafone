@@ -16,15 +16,18 @@ export async function updateOrgProfile(
 
   if (!user) return { error: 'You must be signed in.' }
 
-  // Verify user is a rep for this org
-  const { data: rep } = await supabase
-    .from('org_reps')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('organisation_id', orgId)
-    .maybeSingle()
+  const isAdmin = user.email === process.env.ADMIN_EMAIL
 
-  if (!rep) return { error: 'You are not a verified representative of this organisation.' }
+  if (!isAdmin) {
+    const { data: rep } = await supabase
+      .from('org_reps')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('organisation_id', orgId)
+      .maybeSingle()
+
+    if (!rep) return { error: 'You are not a verified representative of this organisation.' }
+  }
 
   const description = (formData.get('description') as string)?.trim() || null
 

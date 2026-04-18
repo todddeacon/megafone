@@ -22,33 +22,55 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/auth/login?returnTo=/dashboard')
 
-  // Check which orgs this user is a rep for
-  const { data: repRecords } = await supabase
-    .from('org_reps')
-    .select('organisation_id')
-    .eq('user_id', user.id)
-
-  if (!repRecords || repRecords.length === 0) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <p className="text-2xl font-bold text-[#064E3B] mb-2">No organisations</p>
-          <p className="text-sm text-gray-500 mb-6">
-            You're not a verified representative of any organisation yet.
-          </p>
-          <a
-            href="/organisations/claim"
-            className="inline-block rounded-lg bg-[#064E3B] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#065F46] transition-colors"
-          >
-            Claim your organisation
-          </a>
-        </div>
-      </main>
-    )
-  }
-
-  const orgIds = repRecords.map((r) => r.organisation_id)
+  const isAdmin = user.email === process.env.ADMIN_EMAIL
   const admin = createAdminClient()
+
+  // Admin sees all organisations, org reps see only theirs
+  let orgIds: string[]
+
+  if (isAdmin) {
+    // Admin sees orgs that have campaigns, plus any claimed orgs
+    const { data: orgsWithCampaigns } = await admin
+      .from('demands')
+      .select('organisation_id')
+      .eq('moderation_status', 'approved')
+    const { data: claimedOrgs } = await admin
+      .from('organisations')
+      .select('id')
+      .eq('is_claimed', true)
+
+    const ids = new Set([
+      ...(orgsWithCampaigns ?? []).map((d) => d.organisation_id),
+      ...(claimedOrgs ?? []).map((o) => o.id),
+    ])
+    orgIds = [...ids]
+  } else {
+    const { data: repRecords } = await supabase
+      .from('org_reps')
+      .select('organisation_id')
+      .eq('user_id', user.id)
+
+    if (!repRecords || repRecords.length === 0) {
+      return (
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+          <div className="text-center max-w-sm">
+            <p className="text-2xl font-bold text-[#064E3B] mb-2">No organisations</p>
+            <p className="text-sm text-gray-500 mb-6">
+              You're not a verified representative of any organisation yet.
+            </p>
+            <a
+              href="/organisations/claim"
+              className="inline-block rounded-lg bg-[#064E3B] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#065F46] transition-colors"
+            >
+              Claim your organisation
+            </a>
+          </div>
+        </main>
+      )
+    }
+
+    orgIds = repRecords.map((r) => r.organisation_id)
+  }
 
   // Fetch orgs and their campaigns
   const [{ data: orgs }, { data: demands }] = await Promise.all([
@@ -69,7 +91,17 @@ export default async function DashboardPage() {
 
         <div className="mb-10">
           <p className="text-xs font-semibold text-[#F59E0B] uppercase tracking-widest mb-1">Organisation</p>
-          <h1 className="text-3xl font-black tracking-tight text-[#064E3B]">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black tracking-tight text-[#064E3B]">Dashboard</h1>
+            {isAdmin && (
+              <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                Admin view
+              </span>
+            )}
+          </div>
+          {isAdmin && (
+            <p className="text-sm text-gray-400 mt-1">Showing all organisations with campaigns or claimed status.</p>
+          )}
         </div>
 
         {organisations.map((org) => {
