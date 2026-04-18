@@ -125,6 +125,10 @@ function DemandCard({ demand }: { demand: Demand }) {
             </p>
           </div>
         )}
+
+        <p className="text-[10px] text-gray-400 mt-3">
+          Started {new Date(demand.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
       </div>
     </a>
   )

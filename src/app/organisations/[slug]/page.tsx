@@ -207,6 +207,10 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
                         <p className="text-[10px] text-gray-400 mt-1">{pct}% to notification threshold</p>
                       </div>
                     )}
+
+                    <p className="text-[10px] text-gray-400 mt-3">
+                      Started {new Date(demand.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
                   </div>
                 </a>
               )
