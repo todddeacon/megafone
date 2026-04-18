@@ -47,3 +47,116 @@ export async function updateOrgProfile(
   revalidatePath(`/organisations/${orgId}`)
   return { error: null, success: 'Profile updated.' }
 }
+
+async function verifyOrgRep(userId: string, orgId: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  if (user.email === process.env.ADMIN_EMAIL) return true
+  const { data: rep } = await supabase
+    .from('org_reps')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('organisation_id', orgId)
+    .maybeSingle()
+  return !!rep
+}
+
+export async function addTeamMember(
+  orgId: string,
+  prevState: DashboardActionState,
+  formData: FormData
+): Promise<DashboardActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  if (!(await verifyOrgRep(user.id, orgId))) {
+    return { error: 'You are not a verified representative of this organisation.' }
+  }
+
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
+  const name = (formData.get('name') as string)?.trim() || null
+  const title = (formData.get('title') as string)?.trim() || null
+
+  if (!email) return { error: 'Email is required.' }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) return { error: 'Please enter a valid email address.' }
+
+  const admin = createAdminClient()
+
+  // Add to notification emails
+  const { error: emailError } = await admin
+    .from('organisation_notification_emails')
+    .upsert(
+      { organisation_id: orgId, email, label: name, title, source: 'org_rep' },
+      { onConflict: 'organisation_id, email', ignoreDuplicates: false }
+    )
+
+  if (emailError) {
+    return { error: 'Failed to add team member.' }
+  }
+
+  // If this email already has an account, auto-assign as org rep
+  const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const existingUser = users?.find((u) => u.email?.toLowerCase() === email)
+  if (existingUser) {
+    await admin
+      .from('org_reps')
+      .upsert(
+        { user_id: existingUser.id, organisation_id: orgId },
+        { onConflict: 'user_id, organisation_id', ignoreDuplicates: true }
+      )
+  }
+
+  revalidatePath('/dashboard')
+  return { error: null, success: `${name || email} added to the team.` }
+}
+
+export async function removeTeamEmail(
+  orgId: string,
+  emailId: string
+): Promise<DashboardActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  if (!(await verifyOrgRep(user.id, orgId))) {
+    return { error: 'You are not a verified representative of this organisation.' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('organisation_notification_emails')
+    .delete()
+    .eq('id', emailId)
+
+  if (error) return { error: 'Failed to remove team member.' }
+
+  revalidatePath('/dashboard')
+  return { error: null, success: 'Team member removed.' }
+}
+
+export async function removeOrgRep(
+  orgId: string,
+  repId: string
+): Promise<DashboardActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  if (!(await verifyOrgRep(user.id, orgId))) {
+    return { error: 'You are not a verified representative of this organisation.' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('org_reps')
+    .delete()
+    .eq('id', repId)
+
+  if (error) return { error: 'Failed to remove representative.' }
+
+  revalidatePath('/dashboard')
+  return { error: null, success: 'Representative removed.' }
+}

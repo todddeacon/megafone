@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import OrgProfileForm from './OrgProfileForm'
+import TeamSection from './TeamSection'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   building:          { label: 'Building support',       className: 'bg-gray-100 text-gray-500' },
@@ -81,6 +82,37 @@ export default async function DashboardPage() {
       .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false }),
   ])
+
+  // Fetch team data: org reps and notification emails
+  const [{ data: allOrgReps }, { data: allNotifEmails }] = await Promise.all([
+    admin.from('org_reps').select('id, user_id, organisation_id, created_at').in('organisation_id', orgIds),
+    admin.from('organisation_notification_emails').select('id, organisation_id, email, label, title, created_at').in('organisation_id', orgIds),
+  ])
+
+  // Resolve org rep emails from auth
+  const repUserIds = [...new Set((allOrgReps ?? []).map((r) => r.user_id))]
+  const repProfiles = new Map<string, { name: string; email: string }>()
+
+  if (repUserIds.length > 0) {
+    const [{ data: profiles }] = await Promise.all([
+      admin.from('profiles').select('id, name').in('id', repUserIds),
+    ])
+
+    // Get emails from auth
+    let page = 1
+    while (true) {
+      const { data: { users }, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+      if (error || !users || users.length === 0) break
+      for (const u of users) {
+        if (repUserIds.includes(u.id)) {
+          const profile = (profiles ?? []).find((p) => p.id === u.id)
+          repProfiles.set(u.id, { name: profile?.name ?? u.email ?? 'Unknown', email: u.email ?? '' })
+        }
+      }
+      if (users.length < 1000) break
+      page++
+    }
+  }
 
   const organisations = orgs ?? []
   const campaigns = demands ?? []
@@ -212,6 +244,30 @@ export default async function DashboardPage() {
                   </div>
                 )}
               </div>
+
+              {/* Team management */}
+              <TeamSection
+                orgId={org.id}
+                orgName={org.name}
+                reps={(allOrgReps ?? [])
+                  .filter((r) => r.organisation_id === org.id)
+                  .map((r) => ({
+                    id: r.id,
+                    userId: r.user_id,
+                    name: repProfiles.get(r.user_id)?.name ?? 'Unknown',
+                    email: repProfiles.get(r.user_id)?.email ?? '',
+                    createdAt: r.created_at,
+                  }))}
+                notifEmails={(allNotifEmails ?? [])
+                  .filter((e) => e.organisation_id === org.id)
+                  .map((e) => ({
+                    id: e.id,
+                    email: e.email,
+                    name: e.label,
+                    title: e.title,
+                    createdAt: e.created_at,
+                  }))}
+              />
 
               {/* Org profile management */}
               <OrgProfileForm
