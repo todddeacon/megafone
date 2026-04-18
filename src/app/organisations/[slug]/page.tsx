@@ -62,7 +62,7 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
 
   const { data: org } = await supabase
     .from('organisations')
-    .select('id, name, slug, type, logo_url, is_claimed')
+    .select('id, name, slug, type, logo_url, is_claimed, description')
     .eq('slug', slug)
     .single()
 
@@ -140,6 +140,15 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
           )}
         </div>
       </div>
+
+      {/* Description */}
+      {org.description && (
+        <div className="mx-auto max-w-5xl px-4 pt-8">
+          <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5">
+            <p className="text-sm text-gray-600 leading-relaxed">{org.description}</p>
+          </div>
+        </div>
+      )}
 
       {/* Campaigns */}
       <main className="mx-auto max-w-5xl px-4 py-8">
