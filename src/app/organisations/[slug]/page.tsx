@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import OrgAvatar from '@/components/OrgAvatar'
 
 export async function generateMetadata({ params }: PageProps<'/organisations/[slug]'>): Promise<Metadata> {
   const { slug } = await params
@@ -86,9 +87,14 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
         <div className="mx-auto max-w-5xl px-4 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-black text-white shrink-0">
-                {initials}
-              </div>
+              {org.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={org.logo_url} alt={org.name} className="w-14 h-14 rounded-2xl object-cover shrink-0" />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-black text-white shrink-0">
+                  {initials}
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-2.5 mb-1">
                   <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">

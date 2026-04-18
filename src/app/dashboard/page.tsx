@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import OrgProfileForm from './OrgProfileForm'
 import TeamSection from './TeamSection'
+import OrgAvatar from '@/components/OrgAvatar'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   building:          { label: 'Building support',       className: 'bg-gray-100 text-gray-500' },
@@ -145,9 +146,7 @@ export default async function DashboardPage() {
             <div key={org.id} className="mb-12">
               {/* Org header */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-[#064E3B]/10 border border-[#064E3B]/20 flex items-center justify-center text-lg font-bold text-[#064E3B] shrink-0">
-                  {org.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()}
-                </div>
+                <OrgAvatar name={org.name} logoUrl={org.logo_url} size="xl" />
                 <div>
                   <h2 className="text-xl font-black text-[#064E3B]">{org.name}</h2>
                   <a href={`/organisations/${org.slug}`} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
@@ -274,6 +273,7 @@ export default async function DashboardPage() {
                 orgId={org.id}
                 currentDescription={org.description ?? ''}
                 orgName={org.name}
+                logoUrl={org.logo_url ?? null}
               />
             </div>
           )

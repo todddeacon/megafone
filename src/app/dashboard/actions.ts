@@ -48,6 +48,61 @@ export async function updateOrgProfile(
   return { error: null, success: 'Profile updated.' }
 }
 
+export async function uploadOrgLogo(
+  orgId: string,
+  prevState: DashboardActionState,
+  formData: FormData
+): Promise<DashboardActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'You must be signed in.' }
+
+  const isAdmin = user.email === process.env.ADMIN_EMAIL
+  if (!isAdmin) {
+    const { data: rep } = await supabase
+      .from('org_reps')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('organisation_id', orgId)
+      .maybeSingle()
+    if (!rep) return { error: 'You are not a verified representative of this organisation.' }
+  }
+
+  const file = formData.get('logo') as File | null
+  if (!file || file.size === 0) return { error: 'Please select an image.' }
+  if (!file.type.startsWith('image/')) return { error: 'Only image files are accepted.' }
+  if (file.size > 2 * 1024 * 1024) return { error: 'Image must be under 2MB.' }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
+  const filename = `logos/${orgId}.${ext}`
+
+  const admin = createAdminClient()
+
+  // Upload to Supabase Storage
+  const { error: uploadError } = await admin.storage
+    .from('official-responses')
+    .upload(filename, file, { contentType: file.type, upsert: true })
+
+  if (uploadError) return { error: `Upload failed: ${uploadError.message}` }
+
+  const { data: { publicUrl } } = admin.storage
+    .from('official-responses')
+    .getPublicUrl(filename)
+
+  // Update the org record
+  const { error: updateError } = await admin
+    .from('organisations')
+    .update({ logo_url: publicUrl })
+    .eq('id', orgId)
+
+  if (updateError) return { error: 'Failed to save logo.' }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/')
+  return { error: null, success: 'Logo uploaded.' }
+}
+
 async function verifyOrgRep(userId: string, orgId: string): Promise<boolean> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -58,7 +58,7 @@ export function getCachedDemand(id: string) {
         .from('demands')
         .select(`
           *,
-          organisation:organisations(id, name, slug),
+          organisation:organisations(id, name, slug, logo_url),
           questions:demand_questions(id, body, is_followup, round, created_at)
         `)
         .eq('id', id)

@@ -193,9 +193,14 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
             {/* Campaign identity */}
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-full bg-[#064E3B]/10 border border-[#064E3B]/20 flex items-center justify-center text-xs font-bold text-[#064E3B] shrink-0">
-                  {orgInitials}
-                </div>
+                {demand.organisation?.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={demand.organisation.logo_url} alt={orgName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#064E3B]/10 border border-[#064E3B]/20 flex items-center justify-center text-xs font-bold text-[#064E3B] shrink-0">
+                    {orgInitials}
+                  </div>
+                )}
                 <a
                   href={`/organisations/${demand.organisation?.slug}`}
                   className="text-sm font-semibold text-gray-900 hover:underline transition-colors"

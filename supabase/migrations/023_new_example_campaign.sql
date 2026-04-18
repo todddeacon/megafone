@@ -105,7 +105,7 @@ INSERT INTO demand_updates (demand_id, author_user_id, type, body, pdf_url, crea
   ('c0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001',
    'official_response',
    'As promised, the Board has prepared a detailed response addressing each of your five questions. The full document is attached below and covers our timeline, investment plans, stadium redevelopment, youth strategy, and financial sustainability. We look forward to discussing this further at the fan forum on 22 May.',
-   NULL,
+   'https://suibsfxpbdxwglvlzhfe.supabase.co/storage/v1/object/public/official-responses/riverside-athletic-response.pdf',
    '2026-04-01T10:00:00Z');
 
 -- Step 8: Creator updates
