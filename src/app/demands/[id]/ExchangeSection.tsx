@@ -235,7 +235,7 @@ export default function ExchangeSection({
       a.created_at.localeCompare(b.created_at)
     )
     const sortedResponses = [...officialResponses].sort((a, b) =>
-      a.created_at.localeCompare(b.created_at)
+      b.created_at.localeCompare(a.created_at)
     )
 
     return (
@@ -285,7 +285,7 @@ export default function ExchangeSection({
                 <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-emerald-200 rounded-full" />
                 <div className="space-y-6">
                   {sortedResponses.map((response, i) => (
-                    <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === sortedResponses.length - 1} />
+                    <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === 0} />
                   ))}
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function ExchangeSection({
           : null
         const roundResponses = officialResponses
           .filter((r) => r.created_at >= roundStart && (!nextRoundStart || r.created_at < nextRoundStart))
-          .sort((a, b) => a.created_at.localeCompare(b.created_at))
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
         const isLatestRound = round === maxRound
         const roundLabel =
@@ -397,7 +397,7 @@ export default function ExchangeSection({
                     <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-emerald-200 rounded-full" />
                     <div className="space-y-6">
                       {roundResponses.map((response, i) => (
-                        <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === roundResponses.length - 1} />
+                        <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === 0} />
                       ))}
                     </div>
                   </div>
