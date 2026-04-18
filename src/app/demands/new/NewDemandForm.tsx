@@ -354,7 +354,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
             className={inputClass}
           />
           <p className="mt-1 text-xs text-gray-400">
-            Who specifically at the organisation should see this campaign?
+            Who specifically at the organisation should answer these questions?
           </p>
         </div>
 

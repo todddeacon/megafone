@@ -156,7 +156,7 @@ export default function EditDemandForm({ demandId, organisations, initial }: Pro
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
         />
         <p className="mt-1 text-xs text-gray-400">
-          Who specifically at the organisation should see this campaign?
+          Who specifically at the organisation should answer these questions?
         </p>
       </div>
 
