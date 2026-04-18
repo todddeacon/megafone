@@ -33,6 +33,9 @@ export default function CreatorUpdateForm({ demandId }: Props) {
         placeholder="Share an update with your supporters..."
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#064E3B] resize-none"
       />
+      <p className="text-xs text-amber-600">
+        All supporters of this campaign will be notified via email of this update.
+      </p>
       {state.error && (
         <p className="text-xs text-red-600">{state.error}</p>
       )}

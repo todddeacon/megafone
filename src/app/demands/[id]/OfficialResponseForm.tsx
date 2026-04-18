@@ -40,6 +40,9 @@ export default function OfficialResponseForm({ demandId }: Props) {
         placeholder="Write the official response from your organisation…"
         className="w-full rounded-lg border border-green-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
       />
+      <p className="text-xs text-amber-600">
+        All supporters of this campaign will be notified via email when you post this response.
+      </p>
 
       <div className="flex gap-2">
         <button
