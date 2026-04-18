@@ -339,7 +339,7 @@ export async function editComment(
   return { error: null }
 }
 
-export async function addFollowUpQuestion(
+export async function addFollowUpQuestions(
   demandId: string,
   prevState: ActionState,
   formData: FormData
@@ -362,17 +362,20 @@ export async function addFollowUpQuestion(
   if (!demand) return { error: 'Demand not found.' }
   if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can add follow-up questions.' }
 
-  const body = (formData.get('body') as string)?.trim()
-  if (!body) return { error: 'Question cannot be empty.' }
+  const questions = (formData.getAll('question') as string[]).map((q) => q.trim()).filter(Boolean)
+  if (questions.length === 0) return { error: 'At least one question is required.' }
 
-  const profanityMatch = checkProfanity(body, 'campaign')
-  if (profanityMatch) {
-    return { error: 'Your question contains language that doesn\'t meet our community guidelines.' }
-  }
+  // Check each question for profanity and moderation
+  for (const body of questions) {
+    const profanityMatch = checkProfanity(body, 'campaign')
+    if (profanityMatch) {
+      return { error: 'One of your questions contains language that doesn\'t meet our community guidelines.' }
+    }
 
-  const moderation = await checkModeration(body)
-  if (moderation.action !== 'approve') {
-    return { error: 'Your question contains content that doesn\'t meet our community guidelines.' }
+    const moderation = await checkModeration(body)
+    if (moderation.action !== 'approve') {
+      return { error: 'One of your questions contains content that doesn\'t meet our community guidelines.' }
+    }
   }
 
   // Round = number of official responses so far + 1
@@ -384,20 +387,29 @@ export async function addFollowUpQuestion(
 
   const round = (responseCount ?? 0) + 1
 
+  const questionRows = questions.map((body) => ({
+    demand_id: demandId,
+    author_user_id: user.id,
+    body,
+    is_followup: true,
+    round,
+  }))
+
   const { error: insertError } = await supabase
     .from('demand_questions')
-    .insert({ demand_id: demandId, author_user_id: user.id, body, is_followup: true, round })
+    .insert(questionRows)
 
-  if (insertError) return { error: 'Failed to add follow-up question. Please try again.' }
+  if (insertError) return { error: 'Failed to add follow-up questions. Please try again.' }
 
   if (demand.status === 'responded') {
     const { error: statusError } = await supabase.from('demands').update({ status: 'further_questions' }).eq('id', demandId)
-    if (statusError) console.error('[addFollowUpQuestion] Status update failed:', statusError.message)
+    if (statusError) console.error('[addFollowUpQuestions] Status update failed:', statusError.message)
   }
 
+  // Log as update (combine all questions)
   await supabase
     .from('demand_updates')
-    .insert({ demand_id: demandId, author_user_id: user.id, type: 'followup_question', body })
+    .insert({ demand_id: demandId, author_user_id: user.id, type: 'followup_question', body: questions.join('\n') })
 
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
