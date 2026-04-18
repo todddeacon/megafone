@@ -13,7 +13,7 @@ export default async function EditDemandPage({ params }: PageProps<'/demands/[id
     supabase
       .from('demands')
       .select(`
-        id, headline, summary, organisation_id, creator_user_id, notification_threshold,
+        id, headline, summary, organisation_id, creator_user_id, notification_threshold, target_person,
         questions:demand_questions(id, body, is_followup),
         links:demand_links(id, url, title)
       `)
@@ -51,6 +51,7 @@ export default async function EditDemandPage({ params }: PageProps<'/demands/[id
               organisation_id: demand.organisation_id,
               summary: demand.summary,
               notification_threshold: demand.notification_threshold ?? null,
+              target_person: demand.target_person ?? null,
               questions: initialQuestions,
               links,
             }}

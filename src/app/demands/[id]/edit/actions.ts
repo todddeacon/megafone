@@ -33,6 +33,7 @@ export async function updateDemand(
   const organisation_id = formData.get('organisation_id') as string
   const summary = (formData.get('summary') as string)?.trim()
   const questions = (formData.getAll('question') as string[]).filter((q) => q.trim())
+  const target_person = (formData.get('target_person') as string)?.trim() || null
   const thresholdRaw = (formData.get('notification_threshold') as string)?.trim()
   const notification_threshold = thresholdRaw ? parseInt(thresholdRaw, 10) : null
 
@@ -57,7 +58,7 @@ export async function updateDemand(
   // Update the demand
   const { error: updateError } = await supabase
     .from('demands')
-    .update({ headline, organisation_id, summary, notification_threshold })
+    .update({ headline, organisation_id, summary, notification_threshold, target_person })
     .eq('id', demandId)
 
   if (updateError) return { error: 'Failed to update. Please try again.' }

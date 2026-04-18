@@ -22,6 +22,7 @@ interface Props {
     organisation_id: string
     summary: string
     notification_threshold: number | null
+    target_person: string | null
     questions: Question[]
     links: Link[]
   }
@@ -139,6 +140,24 @@ export default function EditDemandForm({ demandId, organisations, initial }: Pro
         >
           + Add another question
         </button>
+      </div>
+
+      {/* Target person or group */}
+      <div>
+        <label htmlFor="target_person" className="block text-sm font-semibold text-gray-900 mb-1">
+          Target person or group <span className="font-normal text-gray-400">(optional)</span>
+        </label>
+        <input
+          id="target_person"
+          name="target_person"
+          type="text"
+          defaultValue={initial.target_person ?? undefined}
+          placeholder="e.g. The Board, Director of Football, CEO"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          Who specifically at the organisation should see this campaign?
+        </p>
       </div>
 
       {/* Notification threshold */}

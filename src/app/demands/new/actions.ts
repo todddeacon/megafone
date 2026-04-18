@@ -24,6 +24,7 @@ export async function createDemand(
   const organisation_id = formData.get('organisation_id') as string
   const summary = (formData.get('summary') as string)?.trim()
   const questions = (formData.getAll('question') as string[]).filter((q) => q.trim())
+  const target_person = (formData.get('target_person') as string)?.trim() || null
   const thresholdRaw = (formData.get('notification_threshold') as string)?.trim()
   const notification_threshold = thresholdRaw ? parseInt(thresholdRaw, 10) : null
 
@@ -60,6 +61,7 @@ export async function createDemand(
       moderation_status,
       moderation_scores: Object.keys(moderation.scores).length > 0 ? moderation.scores : null,
       ...(notification_threshold !== null && { notification_threshold }),
+      ...(target_person && { target_person }),
     })
     .select('id')
     .single()

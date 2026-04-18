@@ -154,6 +154,8 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
     .filter((u) => u.type === 'update')
 
   const orgName = demand.organisation?.name ?? 'Organisation'
+  const targetPerson = demand.target_person ?? null
+  const orgTarget = targetPerson ? `${targetPerson} at ${orgName}` : orgName
   const orgInitials = orgName.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('')
   const createdDate = new Date(demand.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -231,6 +233,11 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                   Campaign by <span className="text-gray-600 font-medium">{creatorName}</span>
                 </p>
               )}
+              {targetPerson && (
+                <p className="mt-1 text-sm text-gray-400">
+                  Directed at <span className="text-gray-600 font-medium">{targetPerson}</span>
+                </p>
+              )}
             </div>
 
             {/* Summary */}
@@ -247,6 +254,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 questions={allQuestions}
                 officialResponses={officialResponses}
                 orgName={orgName}
+                orgTarget={orgTarget}
                 isOrgRep={isOrgRep}
               />
             )}
@@ -262,7 +270,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 questionCount={allQuestions.length}
                 notificationThreshold={demand.notification_threshold ?? null}
                 headline={demand.headline}
-                orgName={orgName}
+                orgName={orgTarget}
 
               />
             </div>
@@ -334,7 +342,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               questionCount={allQuestions.length}
               notificationThreshold={demand.notification_threshold ?? null}
               headline={demand.headline}
-              orgName={orgName}
+              orgName={orgTarget}
             />
             </div>
 

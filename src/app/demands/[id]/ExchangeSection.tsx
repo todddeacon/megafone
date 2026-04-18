@@ -25,6 +25,7 @@ interface Props {
   questions: Question[]
   officialResponses: OfficialResponse[]
   orgName: string
+  orgTarget: string
   isOrgRep: boolean
 }
 
@@ -223,6 +224,7 @@ export default function ExchangeSection({
   questions,
   officialResponses,
   orgName,
+  orgTarget,
   isOrgRep,
 }: Props) {
   if (questions.length === 0 && !isOrgRep) return null
@@ -243,7 +245,7 @@ export default function ExchangeSection({
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
-            Questions for {orgName}
+            Questions for {orgTarget}
           </h2>
           <span className="text-xs text-gray-400">
             {totalCount} {totalCount === 1 ? 'question' : 'questions'}
