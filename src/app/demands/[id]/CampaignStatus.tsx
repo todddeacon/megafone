@@ -30,9 +30,10 @@ function getStates(status: string): StepState[] {
       return ['done', 'done', 'done', 'active', 'future', 'future']
     case 'responded':
       return ['done', 'done', 'done', 'done', 'done', 'pending']
+    case 'further_questions':
+      return ['done', 'done', 'done', 'done', 'done', 'active']
     case 'resolved':
     case 'unsatisfactory':
-    case 'further_questions':
       return ['done', 'done', 'done', 'done', 'done', 'done']
     default:
       return ['done', 'active', 'future', 'future', 'future', 'future']
@@ -196,13 +197,16 @@ export default function CampaignStatus({ status, createdAt, notifiedAt, responde
         state={states[5]}
         isLast
         label={
+          status === 'further_questions' ? 'Follow-up Questions Raised' :
           states[5] === 'done' && resolution ? resolution.label :
           states[5] === 'pending' ? 'Resolution Pending' :
           'Resolution'
         }
-        resolutionStatus={isTerminal ? status : undefined}
+        resolutionStatus={status !== 'further_questions' && isTerminal ? status : undefined}
         meta={
-          states[5] === 'pending' ? (
+          status === 'further_questions' ? (
+            <p className="text-xs text-amber-500">The creator has raised further questions for {orgName}.</p>
+          ) : states[5] === 'pending' ? (
             <p className="text-xs text-amber-500">The campaign creator needs to mark the outcome.</p>
           ) : undefined
         }

@@ -835,7 +835,7 @@ export async function setResolutionStatus(
   const valid = ['resolved', 'unsatisfactory', 'further_questions']
   if (!valid.includes(resolution)) return { error: 'Invalid resolution.' }
 
-  const { error: statusError } = await supabase.from('demands').update({ status: resolution }).eq('id', demandId)
+  const { error: statusError } = await adminForRead.from('demands').update({ status: resolution }).eq('id', demandId)
   if (statusError) return { error: 'Failed to update campaign status. Please try again.' }
 
   // Email supporters about the resolution (resolved or unsatisfactory only)
