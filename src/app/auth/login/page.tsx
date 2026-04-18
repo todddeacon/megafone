@@ -30,7 +30,12 @@ function LoginForm() {
               </svg>
             </div>
             <h2 className="text-lg font-bold text-[#064E3B] mb-2">Check your email</h2>
-            <p className="text-sm text-gray-500 mb-6">{success}</p>
+            <p className="text-sm text-gray-500 mb-4">{success}</p>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 mb-6 text-left">
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Can&apos;t find it? Check your <strong>spam or junk folder</strong>. To make sure you receive future emails from Megafone, add <strong>notifications@megafone.app</strong> to your contacts.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => window.location.reload()}
