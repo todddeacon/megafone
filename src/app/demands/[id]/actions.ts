@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail, sendCreatorFirstSupporterEmail, sendCreatorMilestoneEmail, sendCreatorTargetReachedEmail, sendCreatorResponseReceivedEmail, sendOrgWelcomeEmail, sendOrgCreatorUpdateEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
+import { canActAsCreator, canActAsOrgRep } from '@/lib/admin-mode'
 
 export type ActionState = { error: string | null }
 
@@ -325,7 +326,7 @@ export async function addFollowUpQuestion(
     .single()
 
   if (!demand) return { error: 'Demand not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can add follow-up questions.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can add follow-up questions.' }
 
   const body = (formData.get('body') as string)?.trim()
   if (!body) return { error: 'Question cannot be empty.' }
@@ -391,7 +392,7 @@ export async function addCreatorUpdate(
     .single()
 
   if (demandReadError || !demand) return { error: 'Demand not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can post updates.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can post updates.' }
 
   const body = (formData.get('body') as string)?.trim()
   if (!body) return { error: 'Update cannot be empty.' }
@@ -483,7 +484,7 @@ export async function addDemandLink(
     .single()
 
   if (demandReadError || !demand) return { error: 'Demand not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can add content.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can add content.' }
 
   const url = (formData.get('url') as string)?.trim()
   const title = (formData.get('title') as string)?.trim()
@@ -568,7 +569,7 @@ export async function setResolutionStatus(
     .single()
 
   if (!demand) return { error: 'Campaign not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the campaign creator can mark the outcome.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the campaign creator can mark the outcome.' }
   if (demand.status !== 'responded') return { error: 'The campaign must have a response before marking the outcome.' }
 
   const valid = ['resolved', 'unsatisfactory', 'further_questions']
@@ -641,7 +642,7 @@ export async function postOfficialResponse(
     .eq('organisation_id', demand.organisation_id)
     .maybeSingle()
 
-  if (!rep) return { error: 'Only verified organisation representatives can post official responses.' }
+  if (!rep && !(await canActAsOrgRep(user.email))) return { error: 'Only verified organisation representatives can post official responses.' }
 
   const body = (formData.get('body') as string)?.trim() || null
   const pdfFile = formData.get('pdf') as File | null
@@ -767,7 +768,7 @@ export async function notifyOrgFollowUp(demandId: string): Promise<ActionState> 
     .single()
 
   if (!demand) return { error: 'Campaign not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can notify the organisation.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can notify the organisation.' }
   if (demand.status !== 'further_questions') return { error: 'No follow-up questions to send.' }
 
   const { data: latestQuestion } = await supabase

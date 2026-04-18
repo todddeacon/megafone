@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { canActAsCreator } from '@/lib/admin-mode'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 
 export type EditDemandState = { error: string | null }
@@ -26,7 +27,7 @@ export async function updateDemand(
     .single()
 
   if (!demand) return { error: 'Megafone not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can edit this Megafone.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can edit this Megafone.' }
 
   const headline = (formData.get('headline') as string)?.trim()
   const organisation_id = formData.get('organisation_id') as string
@@ -110,7 +111,7 @@ export async function deleteDemand(demandId: string): Promise<{ error: string } 
     .single()
 
   if (!demand) return { error: 'Campaign not found.' }
-  if (demand.creator_user_id !== user.id) return { error: 'Only the creator can delete this campaign.' }
+  if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the creator can delete this campaign.' }
 
   const { error: deleteError } = await supabase
     .from('demands')
