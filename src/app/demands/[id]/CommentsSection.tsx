@@ -25,9 +25,12 @@ interface Props {
   isAuthenticated: boolean
   isSupporter: boolean
   isCreator: boolean
+  isOrgRep: boolean
   currentUserId: string | null
   creatorUserId: string
   hasNickname: boolean
+  orgName: string
+  orgRepUserIds: string[]
 }
 
 const AVATAR_COLORS = [
@@ -189,6 +192,8 @@ function CommentRow({
   comment,
   isCurrentUser,
   isCommentByCreator,
+  isCommentByOrgRep = false,
+  orgName = '',
   canReply,
   demandId,
   isReply = false,
@@ -196,6 +201,8 @@ function CommentRow({
   comment: Comment
   isCurrentUser: boolean
   isCommentByCreator: boolean
+  isCommentByOrgRep?: boolean
+  orgName?: string
   canReply: boolean
   demandId: string
   isReply?: boolean
@@ -227,6 +234,11 @@ function CommentRow({
           {isCommentByCreator && (
             <span className="rounded-full bg-[#064E3B]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#064E3B]">
               Creator
+            </span>
+          )}
+          {isCommentByOrgRep && !isCommentByCreator && (
+            <span className="rounded-full bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
+              {orgName || 'Official'}
             </span>
           )}
           <span className="text-xs text-gray-400">{relativeTime(comment.created_at)}</span>
@@ -282,12 +294,16 @@ export default function CommentsSection({
   isAuthenticated,
   isSupporter,
   isCreator,
+  isOrgRep,
   currentUserId,
   creatorUserId,
   hasNickname,
+  orgName,
+  orgRepUserIds,
 }: Props) {
   const [showAll, setShowAll] = useState(false)
-  const canComment = isAuthenticated && (isSupporter || isCreator)
+  const canComment = isAuthenticated && (isSupporter || isCreator || isOrgRep)
+  const orgRepSet = new Set(orgRepUserIds)
 
   // Split into top-level (newest first) and replies grouped by parent
   const topLevel = comments.filter((c) => !c.parent_comment_id)
@@ -361,6 +377,8 @@ export default function CommentsSection({
                     comment={comment}
                     isCurrentUser={comment.user_id === currentUserId}
                     isCommentByCreator={comment.user_id === creatorUserId}
+                    isCommentByOrgRep={orgRepSet.has(comment.user_id)}
+                    orgName={orgName}
                     canReply={canComment && hasNickname}
                     demandId={demandId}
                   />
@@ -373,6 +391,8 @@ export default function CommentsSection({
                             comment={reply}
                             isCurrentUser={reply.user_id === currentUserId}
                             isCommentByCreator={reply.user_id === creatorUserId}
+                            isCommentByOrgRep={orgRepSet.has(reply.user_id)}
+                            orgName={orgName}
                             canReply={false}
                             demandId={demandId}
                             isReply

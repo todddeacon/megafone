@@ -6,6 +6,7 @@ interface Props {
   name: string
   email: string
   isAdmin?: boolean
+  isOrgRep?: boolean
 }
 
 function initials(name: string) {
@@ -17,7 +18,7 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function NavBarDropdown({ name, email, isAdmin }: Props) {
+export default function NavBarDropdown({ name, email, isAdmin, isOrgRep }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -59,6 +60,15 @@ export default function NavBarDropdown({ name, email, isAdmin }: Props) {
             >
               My campaigns
             </a>
+            {isOrgRep && (
+              <a
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Organisation dashboard
+              </a>
+            )}
             <a
               href="/profile"
               onClick={() => setOpen(false)}

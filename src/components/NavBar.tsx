@@ -9,9 +9,14 @@ export default async function NavBar() {
   const h = await headers()
   const returnTo = encodeURIComponent(h.get('x-pathname') ?? '/')
 
-  const { data: profile } = user
-    ? await supabase.from('profiles').select('name').eq('id', user.id).single()
-    : { data: null }
+  const [{ data: profile }, { data: orgRep }] = user
+    ? await Promise.all([
+        supabase.from('profiles').select('name').eq('id', user.id).single(),
+        supabase.from('org_reps').select('id').eq('user_id', user.id).limit(1).maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }]
+
+  const isOrgRep = !!orgRep
 
   return (
     <header className="sticky top-0 z-50 bg-[#064E3B] border-b border-[#065F46]">
@@ -33,6 +38,7 @@ export default async function NavBar() {
               name={profile?.name ?? user.email ?? 'Account'}
               email={user.email ?? ''}
               isAdmin={user.email === process.env.ADMIN_EMAIL}
+              isOrgRep={isOrgRep}
             />
           ) : (
             <a

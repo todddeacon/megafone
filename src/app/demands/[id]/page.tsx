@@ -106,6 +106,14 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   const isOrgRep = !!orgRepResult.data
   const hasNickname = !!(currentUserProfileResult.data?.nickname)
 
+  // Fetch all org rep user IDs for this org (for comment badges)
+  const adminForReps = (await import('@/lib/supabase/admin')).createAdminClient()
+  const { data: orgRepUsers } = await adminForReps
+    .from('org_reps')
+    .select('user_id')
+    .eq('organisation_id', demand.organisation_id)
+  const orgRepUserIds = new Set((orgRepUsers ?? []).map((r) => r.user_id))
+
   const officialResponses = (updates as { id: string; type: string; body: string; pdf_url: string | null; video_url: string | null; created_at: string }[])
     .filter((u) => u.type === 'official_response')
   const hasResponse = officialResponses.length > 0
@@ -275,9 +283,12 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               isAuthenticated={!!user}
               isSupporter={isSupporter}
               isCreator={isCreator}
+              isOrgRep={isOrgRep}
               currentUserId={user?.id ?? null}
               creatorUserId={demand.creator_user_id}
               hasNickname={hasNickname}
+              orgName={orgName}
+              orgRepUserIds={[...orgRepUserIds]}
             />
 
           </div>
