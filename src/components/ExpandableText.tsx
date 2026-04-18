@@ -25,7 +25,7 @@ export default function ExpandableText({ text, maxLines = 3, className = '' }: P
     <div>
       <p
         ref={textRef}
-        className={`${className} whitespace-pre-line ${
+        className={`${className} ${
           !expanded && needsTruncation ? `line-clamp-${maxLines}` : ''
         }`}
         style={!expanded && needsTruncation ? { WebkitLineClamp: maxLines, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' } : undefined}
