@@ -532,6 +532,75 @@ export async function deleteCreatorUpdate(
   return { error: null }
 }
 
+export async function editOfficialResponse(
+  updateId: string,
+  demandId: string,
+  newBody: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const adminForRead = createAdminClient()
+  const { data: update } = await adminForRead
+    .from('demand_updates')
+    .select('author_user_id, type')
+    .eq('id', updateId)
+    .single()
+
+  if (!update || update.type !== 'official_response') return { error: 'Response not found.' }
+  if (update.author_user_id !== user.id && !(await canActAsOrgRep(user.email))) {
+    return { error: 'Only the organisation representative can edit this response.' }
+  }
+
+  const body = newBody.trim()
+  if (!body) return { error: 'Response cannot be empty.' }
+  if (body.length > 3000) return { error: 'Response must be under 3000 characters.' }
+
+  const { error } = await adminForRead
+    .from('demand_updates')
+    .update({ body })
+    .eq('id', updateId)
+
+  if (error) return { error: 'Failed to edit response.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
+export async function deleteOfficialResponse(
+  updateId: string,
+  demandId: string
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const adminForRead = createAdminClient()
+  const { data: update } = await adminForRead
+    .from('demand_updates')
+    .select('author_user_id, type')
+    .eq('id', updateId)
+    .single()
+
+  if (!update || update.type !== 'official_response') return { error: 'Response not found.' }
+  if (update.author_user_id !== user.id && !(await canActAsOrgRep(user.email))) {
+    return { error: 'Only the organisation representative can delete this response.' }
+  }
+
+  const { error } = await adminForRead
+    .from('demand_updates')
+    .delete()
+    .eq('id', updateId)
+
+  if (error) return { error: 'Failed to delete response.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
 export async function addDemandLink(
   demandId: string,
   prevState: ActionState,

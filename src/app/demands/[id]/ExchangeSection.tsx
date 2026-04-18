@@ -1,4 +1,9 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import OfficialResponseForm from './OfficialResponseForm'
+import { editOfficialResponse, deleteOfficialResponse } from './actions'
 
 interface Question {
   id: string
@@ -21,6 +26,18 @@ interface Props {
   officialResponses: OfficialResponse[]
   orgName: string
   isOrgRep: boolean
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function formatDate(ts: string) {
@@ -60,26 +77,135 @@ function ResponseAttachments({ response }: { response: OfficialResponse }) {
   )
 }
 
-function ResponseBlock({ response, orgName }: { response: OfficialResponse; orgName: string }) {
+function ResponseBlock({ response, orgName, isOrgRep, demandId }: { response: OfficialResponse; orgName: string; isOrgRep: boolean; demandId: string }) {
+  const router = useRouter()
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(response.body ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editPending, startEdit] = useTransition()
+  const [deletePending, startDelete] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function handleEdit() {
+    setError(null)
+    startEdit(async () => {
+      const result = await editOfficialResponse(response.id, demandId, editText)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setEditing(false)
+        router.refresh()
+      }
+    })
+  }
+
+  function handleDelete() {
+    setError(null)
+    startDelete(async () => {
+      const result = await deleteOfficialResponse(response.id, demandId)
+      if (result.error) {
+        setError(result.error)
+        setConfirmDelete(false)
+      } else {
+        router.refresh()
+      }
+    })
+  }
+
   return (
-    <div className="px-6 py-5 border-t border-emerald-100 bg-emerald-50/40 space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+    <div className="px-6 py-5 border-t border-emerald-100 bg-emerald-50/40">
+      {/* Timeline header */}
+      <div className="relative pl-7 mb-3">
+        <div className="absolute left-0 top-1 w-[11px] h-[11px] rounded-full bg-emerald-500 border-2 border-emerald-500" />
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold uppercase tracking-widest text-emerald-700">
+            Response from {orgName}
+          </span>
+          <span className="text-[10px] text-gray-400">{formatDate(response.created_at)}</span>
+          <span className="text-[10px] text-gray-400">{timeAgo(response.created_at)}</span>
         </div>
-        <span className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-          Response from {orgName}
-        </span>
-        <span className="text-xs text-gray-400 ml-auto">{formatDate(response.created_at)}</span>
       </div>
-      {response.body && (
-        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
-          {response.body}
-        </p>
-      )}
-      <ResponseAttachments response={response} />
+
+      {/* Response body */}
+      <div className="relative pl-7">
+        {/* Vertical line */}
+        <div className="absolute left-[5px] top-0 bottom-0 w-0.5 bg-emerald-200 rounded-full" />
+
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={4}
+              maxLength={3000}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            />
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleEdit}
+                disabled={editPending || !editText.trim()}
+                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {editPending ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => { setEditing(false); setEditText(response.body ?? ''); setError(null) }}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="group/response">
+            {response.body && (
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line mb-3">
+                {response.body}
+              </p>
+            )}
+            <ResponseAttachments response={response} />
+
+            {isOrgRep && (
+              <div className="mt-3 flex gap-2 opacity-0 group-hover/response:opacity-100 transition-opacity">
+                {response.body && (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
+                {!confirmDelete ? (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="text-[10px] font-semibold text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deletePending}
+                      className="text-[10px] font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      {deletePending ? 'Deleting...' : 'Confirm delete'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      className="text-[10px] text-gray-400 hover:text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {error && !editing && <span className="text-[10px] text-red-500">{error}</span>}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -97,7 +223,6 @@ export default function ExchangeSection({
   const totalCount = questions.length
 
   if (!isMultiRound) {
-    // Single-round: clean display with no round labels
     const sortedQuestions = [...questions].sort((a, b) =>
       a.created_at.localeCompare(b.created_at)
     )
@@ -127,7 +252,7 @@ export default function ExchangeSection({
           </ol>
         )}
 
-        {response && <ResponseBlock response={response} orgName={orgName} />}
+        {response && <ResponseBlock response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />}
 
         {isOrgRep && (
           <div className="border-t border-gray-100">
@@ -138,7 +263,7 @@ export default function ExchangeSection({
     )
   }
 
-  // Multi-round: show each round as a labelled card
+  // Multi-round
   const maxRound = Math.max(...questions.map((q) => q.round))
 
   return (
@@ -155,7 +280,6 @@ export default function ExchangeSection({
 
         return (
           <div key={round} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            {/* Round header */}
             <div
               className={`px-6 py-3.5 border-b flex items-center justify-between ${
                 isActiveRound
@@ -182,7 +306,6 @@ export default function ExchangeSection({
               )}
             </div>
 
-            {/* Questions */}
             {roundQuestions.length > 0 && (
               <ol className="divide-y divide-gray-100 list-none">
                 {roundQuestions.map((q, i) => (
@@ -202,10 +325,8 @@ export default function ExchangeSection({
               </ol>
             )}
 
-            {/* Response */}
-            {response && <ResponseBlock response={response} orgName={orgName} />}
+            {response && <ResponseBlock response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />}
 
-            {/* Org response form on the last unanswered round */}
             {isOrgRep && isActiveRound && round === maxRound && (
               <div className="border-t border-gray-100">
                 <OfficialResponseForm demandId={demandId} />
