@@ -56,9 +56,10 @@ export async function runHealthCheck(): Promise<HealthCheckResult> {
 
   // ── 2. Auth system ────────────────────────────────────────────
   results.push(await runTest('Auth system', async () => {
-    const { data: { users }, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1 })
+    // Use getUserById with the current admin user as a lightweight auth check
+    const { data, error } = await admin.auth.admin.getUserById(user.id)
     if (error) throw new Error(error.message)
-    return `Working — ${users.length > 0 ? 'users accessible' : 'no users yet'}`
+    return `Working — admin user verified (${data.user.email})`
   }))
 
   // ── 3. Organisations exist ────────────────────────────────────
