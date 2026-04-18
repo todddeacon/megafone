@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCachedDemand } from '@/lib/cached-queries'
+import ExpandableText from '@/components/ExpandableText'
 
 export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): Promise<Metadata> {
   const { id } = await params
@@ -242,9 +243,13 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
 
             {/* Summary */}
             {demand.summary && (
-              <p className="text-base text-gray-600 leading-relaxed border-l-4 border-[#064E3B]/20 pl-4 whitespace-pre-line">
-                {demand.summary}
-              </p>
+              <div className="border-l-4 border-[#064E3B]/20 pl-4">
+                <ExpandableText
+                  text={demand.summary}
+                  maxLines={3}
+                  className="text-base text-gray-600 leading-relaxed"
+                />
+              </div>
             )}
 
             {/* Questions + responses exchange */}

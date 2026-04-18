@@ -219,6 +219,55 @@ function ResponseItem({ response, orgName, isOrgRep, demandId, isLatest }: { res
   )
 }
 
+const INITIAL_QUESTIONS = 2
+
+function QuestionsList({ questions, startIndex = 0, roundStyle = 'default' }: {
+  questions: Question[]
+  startIndex?: number
+  roundStyle?: 'default' | 'followup'
+}) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? questions : questions.slice(0, INITIAL_QUESTIONS)
+  const hidden = questions.length - INITIAL_QUESTIONS
+
+  return (
+    <>
+      <ol className="divide-y divide-gray-100 list-none">
+        {visible.map((q, i) => (
+          <li key={q.id} className="flex gap-4 px-6 py-5 group">
+            <span
+              className={`shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 transition-colors ${
+                roundStyle === 'followup'
+                  ? 'bg-amber-50 border border-amber-100 text-amber-600'
+                  : 'bg-[#064E3B]/[0.06] text-[#064E3B] group-hover:bg-[#064E3B]/10'
+              }`}
+            >
+              {startIndex + i + 1}
+            </span>
+            <span className="text-sm text-gray-800 leading-relaxed">{q.body}</span>
+          </li>
+        ))}
+      </ol>
+      {!showAll && hidden > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full py-3 text-xs font-semibold text-[#064E3B] hover:bg-gray-50 border-t border-gray-100 transition-colors"
+        >
+          Show all {questions.length} questions
+        </button>
+      )}
+      {showAll && hidden > 0 && (
+        <button
+          onClick={() => setShowAll(false)}
+          className="w-full py-3 text-xs font-semibold text-gray-400 hover:bg-gray-50 border-t border-gray-100 transition-colors"
+        >
+          Show fewer
+        </button>
+      )}
+    </>
+  )
+}
+
 export default function ExchangeSection({
   demandId,
   questions,
@@ -253,16 +302,7 @@ export default function ExchangeSection({
         </div>
 
         {sortedQuestions.length > 0 && (
-          <ol className="divide-y divide-gray-100 list-none">
-            {sortedQuestions.map((q, i) => (
-              <li key={q.id} className="flex gap-4 px-6 py-5 group">
-                <span className="shrink-0 w-6 h-6 rounded-full bg-[#064E3B]/[0.06] text-[#064E3B] text-xs font-bold flex items-center justify-center mt-0.5 group-hover:bg-[#064E3B]/10 transition-colors">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-gray-800 leading-relaxed">{q.body}</span>
-              </li>
-            ))}
-          </ol>
+          <QuestionsList questions={sortedQuestions} />
         )}
 
       </div>
@@ -359,22 +399,11 @@ export default function ExchangeSection({
             </div>
 
             {roundQuestions.length > 0 && (
-              <ol className="divide-y divide-gray-100 list-none">
-                {roundQuestions.map((q, i) => (
-                  <li key={q.id} className="flex gap-4 px-6 py-5 group">
-                    <span
-                      className={`shrink-0 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 transition-colors ${
-                        round === 1
-                          ? 'bg-[#064E3B]/[0.06] text-[#064E3B] group-hover:bg-[#064E3B]/10'
-                          : 'bg-amber-50 border border-amber-100 text-amber-600'
-                      }`}
-                    >
-                      {previousCount + i + 1}
-                    </span>
-                    <span className="text-sm text-gray-800 leading-relaxed">{q.body}</span>
-                  </li>
-                ))}
-              </ol>
+              <QuestionsList
+                questions={roundQuestions}
+                startIndex={previousCount}
+                roundStyle={round === 1 ? 'default' : 'followup'}
+              />
             )}
 
           </div>
