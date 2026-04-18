@@ -81,7 +81,7 @@ function ResponseAttachments({ response }: { response: OfficialResponse }) {
   )
 }
 
-function ResponseBlock({ response, orgName, isOrgRep, demandId }: { response: OfficialResponse; orgName: string; isOrgRep: boolean; demandId: string }) {
+function ResponseItem({ response, orgName, isOrgRep, demandId, isLatest }: { response: OfficialResponse; orgName: string; isOrgRep: boolean; demandId: string; isLatest: boolean }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(response.body ?? '')
@@ -117,29 +117,27 @@ function ResponseBlock({ response, orgName, isOrgRep, demandId }: { response: Of
   }
 
   return (
-    <div className="px-6 py-5 border-t border-emerald-100 bg-emerald-50/40">
-      <div className="relative pl-7">
-        {/* Timeline dot */}
-        <div className="absolute left-0 top-1 w-[11px] h-[11px] rounded-full bg-emerald-500 border-2 border-emerald-500" />
-        {/* Vertical line */}
-        <div className="absolute left-[5px] top-3 bottom-0 w-0.5 bg-emerald-200 rounded-full" />
+    <div className="relative pl-7">
+      {/* Timeline dot */}
+      <div className={`absolute left-0 top-1 w-[11px] h-[11px] rounded-full border-2 ${
+        isLatest
+          ? 'bg-emerald-500 border-emerald-500'
+          : 'bg-white border-emerald-300'
+      }`} />
 
-        {/* Title */}
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-1">
-          Response from {orgName}
-        </p>
-
-        {/* Date line — matching creator update style */}
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-xs font-semibold text-gray-500">{formatDate(response.created_at)}</p>
-          <span className="text-[10px] text-gray-400">{timeAgo(response.created_at)}</span>
-        </div>
+      {/* Date line */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <p className="text-xs font-semibold text-gray-500">{formatDate(response.created_at)}</p>
+        <span className="text-[10px] text-gray-400">{timeAgo(response.created_at)}</span>
+        {isLatest && (
+          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">
+            Latest
+          </span>
+        )}
       </div>
 
       {/* Response body */}
-      <div className="relative pl-7">
-        {/* Vertical line continued */}
-        <div className="absolute left-[5px] top-0 bottom-0 w-0.5 bg-emerald-200 rounded-full" />
+      <div>
 
         {editing ? (
           <div className="space-y-2">
@@ -241,6 +239,7 @@ export default function ExchangeSection({
     )
 
     return (
+      <>
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
@@ -264,16 +263,43 @@ export default function ExchangeSection({
           </ol>
         )}
 
-        {sortedResponses.map((response) => (
-          <ResponseBlock key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />
-        ))}
-
-        {isOrgRep && (
-          <div className="border-t border-gray-100">
-            <OfficialResponseForm demandId={demandId} />
-          </div>
-        )}
       </div>
+
+      {/* Responses — separate card matching creator updates design */}
+      {(sortedResponses.length > 0 || isOrgRep) && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+          <div className="px-6 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
+              Response from {orgName}
+            </h2>
+            {sortedResponses.length > 0 && (
+              <span className="text-xs font-semibold text-emerald-600">
+                {sortedResponses.length} {sortedResponses.length === 1 ? 'response' : 'responses'}
+              </span>
+            )}
+          </div>
+
+          {sortedResponses.length > 0 && (
+            <div className="px-6 py-5">
+              <div className="relative">
+                <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-emerald-200 rounded-full" />
+                <div className="space-y-6">
+                  {sortedResponses.map((response, i) => (
+                    <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === sortedResponses.length - 1} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isOrgRep && (
+            <div className="border-t border-emerald-100">
+              <OfficialResponseForm demandId={demandId} />
+            </div>
+          )}
+        </div>
+      )}
+      </>
     )
   }
 
@@ -302,7 +328,8 @@ export default function ExchangeSection({
           round === 1 ? 'Round 1 — Initial questions' : `Round ${round} — Follow-up questions`
 
         return (
-          <div key={round} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div key={round}>
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div
               className={`px-6 py-3.5 border-b flex items-center justify-between ${
                 isLatestRound && roundResponses.length === 0
@@ -348,15 +375,42 @@ export default function ExchangeSection({
               </ol>
             )}
 
-            {roundResponses.map((response) => (
-              <ResponseBlock key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} />
-            ))}
+          </div>
 
-            {isOrgRep && isLatestRound && (
-              <div className="border-t border-gray-100">
-                <OfficialResponseForm demandId={demandId} />
+          {/* Responses for this round — separate card */}
+          {(roundResponses.length > 0 || (isOrgRep && isLatestRound)) && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-4">
+              <div className="px-6 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
+                  Response from {orgName}
+                </h2>
+                {roundResponses.length > 0 && (
+                  <span className="text-xs font-semibold text-emerald-600">
+                    {roundResponses.length} {roundResponses.length === 1 ? 'response' : 'responses'}
+                  </span>
+                )}
               </div>
-            )}
+
+              {roundResponses.length > 0 && (
+                <div className="px-6 py-5">
+                  <div className="relative">
+                    <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-emerald-200 rounded-full" />
+                    <div className="space-y-6">
+                      {roundResponses.map((response, i) => (
+                        <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === roundResponses.length - 1} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isOrgRep && isLatestRound && (
+                <div className="border-t border-emerald-100">
+                  <OfficialResponseForm demandId={demandId} />
+                </div>
+              )}
+            </div>
+          )}
           </div>
         )
       })}
