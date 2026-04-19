@@ -237,7 +237,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                     ? 'bg-amber-50 text-amber-700 border border-amber-200'
                     : 'bg-blue-50 text-blue-700 border border-blue-200'
                 }`}>
-                  {isPetition ? 'Seeking change' : 'Seeking answers'}
+                  {isPetition ? 'Demand Change' : 'Ask Questions'}
                 </span>
               </div>
 

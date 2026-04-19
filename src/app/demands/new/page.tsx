@@ -25,7 +25,7 @@ export default async function NewDemandPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight text-[#064E3B]">Create a Campaign</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Ask the questions that matter. Get answers.
+            Ask the questions that matter, or demand the change you want.
           </p>
         </div>
 

@@ -324,7 +324,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
                 campaignType === 'qa' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Seeking answers
+              Ask Questions
             </button>
             <button
               type="button"
@@ -333,13 +333,14 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
                 campaignType === 'petition' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Seeking change
+              Demand Change
             </button>
           </div>
           <p className="mt-1 text-xs text-gray-400">
             {campaignType === 'qa'
               ? 'Ask specific questions and get answers from the organisation.'
-              : 'Demand a specific action or change from the organisation.'}
+              : 'Demand a specific action or change from the organisation.'
+            }
           </p>
         </div>
 
@@ -438,6 +439,28 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           </p>
         </div>
 
+        {/* Petition: demand field before summary */}
+        {campaignType === 'petition' && (
+          <div>
+            <label htmlFor="demand_text" className={labelClass}>
+              The demand <span className="text-[#F59E0B]">*</span>
+            </label>
+            <textarea
+              id="demand_text"
+              name="demand_text"
+              required
+              rows={3}
+              value={demandText}
+              onChange={(e) => setDemandText(e.target.value)}
+              placeholder="State the specific action or change you want — e.g. 'We are calling on the club to reduce matchday ticket prices for under-18s by at least 50%'"
+              className={`${inputClass} resize-none`}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Be specific about what you want the organisation to do.
+            </p>
+          </div>
+        )}
+
         {/* Summary */}
         <div>
           <label htmlFor="summary" className={labelClass}>
@@ -455,7 +478,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           />
         </div>
 
-        {/* Questions (Q&A) or Demand (Petition) */}
+        {/* Questions (Q&A only) */}
         {campaignType === 'qa' ? (
           <div>
             <label className={labelClass}>
@@ -492,26 +515,7 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
               + Add another question
             </button>
           </div>
-        ) : (
-          <div>
-            <label htmlFor="demand_text" className={labelClass}>
-              The demand <span className="text-[#F59E0B]">*</span>
-            </label>
-            <textarea
-              id="demand_text"
-              name="demand_text"
-              required
-              rows={3}
-              value={demandText}
-              onChange={(e) => setDemandText(e.target.value)}
-              placeholder="State the specific action or change you want — e.g. 'We are calling on the club to reduce matchday ticket prices for under-18s by at least 50%'"
-              className={`${inputClass} resize-none`}
-            />
-            <p className="mt-1 text-xs text-gray-400">
-              Be specific about what you want the organisation to do.
-            </p>
-          </div>
-        )}
+        ) : null}
 
         {/* Supporter target */}
         <div>
