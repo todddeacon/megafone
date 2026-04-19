@@ -184,22 +184,22 @@ function FeaturedCard({ demand }: { demand: Demand }) {
       href={`/demands/${demand.id}`}
       className="group block bg-white rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-shadow"
     >
-      {demand.is_example ? (
-        <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3">
+        {demand.is_example ? (
           <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Example campaign</span>
-          <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[9px] font-semibold text-amber-600">
-            See how it works
-          </span>
-        </div>
-      ) : demand.is_featured ? (
-        <p className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest mb-3">
-          Featured campaign
-        </p>
-      ) : (
-        <p className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest mb-3">
-          Trending right now
-        </p>
-      )}
+        ) : demand.is_featured ? (
+          <span className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest">Featured campaign</span>
+        ) : (
+          <span className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest">Trending right now</span>
+        )}
+        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+          demand.campaign_type === 'petition'
+            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+            : 'bg-blue-50 text-blue-700 border border-blue-200'
+        }`}>
+          {demand.campaign_type === 'petition' ? 'Seeking change' : 'Seeking answers'}
+        </span>
+      </div>
       <div className="flex items-center gap-2 mb-3">
         <div className="w-6 h-6 rounded-full bg-[#064E3B]/10 flex items-center justify-center text-[10px] font-black text-[#064E3B] shrink-0">
           {orgInitials(demand.organisation?.name ?? '?')}
