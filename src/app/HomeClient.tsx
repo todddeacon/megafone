@@ -282,9 +282,9 @@ function HowItWorks() {
       <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-6">How it works</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
-          { n: '01', title: 'Raise an issue', desc: 'Write a campaign headline and the specific questions you want answered' },
-          { n: '02', title: 'Build collective support', desc: 'Other fans add their name — the more supporters, the harder to ignore' },
-          { n: '03', title: 'Hold clubs accountable', desc: 'When the threshold is hit, the club is notified and can respond publicly' },
+          { n: '01', title: 'Start a campaign', desc: 'Ask questions or demand change. Set out what you want from your club and why it matters.' },
+          { n: '02', title: 'Build support', desc: 'Share your campaign. The more fans behind it, the harder it is to ignore.' },
+          { n: '03', title: 'Get a response', desc: 'When you hit your target, the organisation is notified and has the opportunity to respond publicly.' },
         ].map(({ n, title, desc }) => (
           <div key={n} className="flex gap-3">
             <span className="text-2xl font-black text-white/20 leading-none mt-0.5 shrink-0">{n}</span>
