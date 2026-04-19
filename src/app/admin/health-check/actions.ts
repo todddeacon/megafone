@@ -95,6 +95,36 @@ export async function runHealthCheck(): Promise<HealthCheckResult> {
     return `Created test campaign: ${data.id.slice(0, 8)}...`
   }))
 
+  // ── 4b. Create petition campaign ──────────────────────────────
+  let testPetitionId: string | null = null
+  results.push(await runTest('Create petition campaign', async () => {
+    const { data: org } = await admin.from('organisations').select('id').limit(1).single()
+    if (!org) throw new Error('No organisation to test with')
+
+    const { data, error } = await admin
+      .from('demands')
+      .insert({
+        organisation_id: org.id,
+        creator_user_id: user.id,
+        headline: '__HEALTH_CHECK_PETITION_TEST__',
+        summary: 'Automated health check petition — will be deleted',
+        campaign_type: 'petition',
+        demand_text: 'Test demand text for health check',
+        status: 'building',
+        support_count_cache: 0,
+        notification_threshold: 100,
+        moderation_status: 'approved',
+      })
+      .select('id, campaign_type, demand_text')
+      .single()
+
+    if (error) throw new Error(error.message)
+    if (data.campaign_type !== 'petition') throw new Error(`Expected campaign_type "petition", got "${data.campaign_type}"`)
+    if (!data.demand_text) throw new Error('demand_text not saved')
+    testPetitionId = data.id
+    return `Created petition campaign: ${data.id.slice(0, 8)}...`
+  }))
+
   // ── 5. Support campaign (atomic increment) ────────────────────
   results.push(await runTest('Support + atomic increment', async () => {
     if (!testDemandId) throw new Error('No test campaign to support')
@@ -196,6 +226,8 @@ export async function runHealthCheck(): Promise<HealthCheckResult> {
       { table: 'demands', column: 'moderation_status' },
       { table: 'demands', column: 'moderation_scores' },
       { table: 'demands', column: 'is_example' },
+      { table: 'demands', column: 'campaign_type' },
+      { table: 'demands', column: 'demand_text' },
       { table: 'demand_questions', column: 'round' },
       { table: 'demand_updates', column: 'video_url' },
       { table: 'comments', column: 'parent_comment_id' },
@@ -261,6 +293,11 @@ export async function runHealthCheck(): Promise<HealthCheckResult> {
     if (testSupportId) {
       await admin.from('supports').delete().eq('id', testSupportId)
       cleaned.push('support')
+    }
+
+    if (testPetitionId) {
+      await admin.from('demands').delete().eq('id', testPetitionId)
+      cleaned.push('petition')
     }
 
     if (testDemandId) {
