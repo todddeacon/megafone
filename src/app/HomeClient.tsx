@@ -184,7 +184,7 @@ function FeaturedCard({ demand }: { demand: Demand }) {
       href={`/demands/${demand.id}`}
       className="group block bg-white rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-shadow"
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3">
         {demand.is_example ? (
           <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Example campaign</span>
         ) : demand.is_featured ? (
