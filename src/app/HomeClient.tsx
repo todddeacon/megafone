@@ -254,7 +254,7 @@ function Hero({ featured }: { featured: Demand | null }) {
               Get Answers.<br />Get Change.
             </h1>
             <p className="text-emerald-200 text-base max-w-sm leading-relaxed mb-7">
-              When fans speak with one voice, organisations have to listen. Start a campaign or add your support to one that matters.
+              When fans speak with one voice, sports organisations have to listen. Start a campaign or add your support to one that matters.
             </p>
             <div className="flex gap-3">
               <a
