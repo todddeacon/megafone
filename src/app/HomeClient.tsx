@@ -251,7 +251,7 @@ function Hero({ featured }: { featured: Demand | null }) {
           {/* Copy */}
           <div>
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight mb-4">
-              Ask Questions,<br />Get Answers.
+              Get Answers.<br />Get Change.
             </h1>
             <p className="text-emerald-200 text-base max-w-sm leading-relaxed mb-7">
               When fans speak with one voice, organisations have to listen. Start a campaign or add your support to one that matters.
