@@ -10,7 +10,7 @@ export async function signInWithProvider(formData: FormData): Promise<void> {
   if (provider !== 'google' && provider !== 'apple') redirect('/auth/login?error=invalid_provider')
 
   const returnTo = safeReturnTo(formData.get('returnTo') as string)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://megafone.app'
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -71,7 +71,7 @@ export async function signInWithMagicLink(
 
   const email = (formData.get('email') as string)?.trim()
   const returnTo = safeReturnTo(formData.get('returnTo') as string)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://megafone.app'
 
   if (!email) return { error: 'Email is required.' }
 
@@ -102,7 +102,7 @@ export async function signUp(
   if (!email || !password) return { error: 'Email and password are required.' }
   if (!name) return { error: 'Your name is required.' }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://megafone.app'
 
   const { data, error } = await supabase.auth.signUp({
     email,

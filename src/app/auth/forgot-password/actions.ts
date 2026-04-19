@@ -11,7 +11,7 @@ export async function requestPasswordReset(
   const email = (formData.get('email') as string)?.trim()
   if (!email) return { error: 'Email is required.', success: false }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://megafone.app'
   const supabase = await createClient()
 
   await supabase.auth.resetPasswordForEmail(email, {

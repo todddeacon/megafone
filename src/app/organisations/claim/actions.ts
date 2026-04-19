@@ -75,7 +75,7 @@ export async function signUpAndClaim(
   }
 
   // Create the account
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://megafone.app'
 
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,

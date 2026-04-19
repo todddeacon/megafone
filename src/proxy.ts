@@ -38,7 +38,15 @@ export async function proxy(request: NextRequest) {
   )
 
   // Refresh the session if expired — required for Server Components
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Protect /admin routes — redirect non-admins to home
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const adminEmail = process.env.ADMIN_EMAIL
+    if (!user?.email || user.email !== adminEmail) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+  }
 
   // Expose the current pathname to server components via a request header
   supabaseResponse.headers.set('x-pathname', request.nextUrl.pathname)
