@@ -274,14 +274,16 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
 
             {/* Demand section (petition) */}
             {isPetition && demand.demand_text && (
-              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+              <div className="rounded-2xl overflow-hidden border border-[#064E3B]/20">
+                <div className="px-6 py-4 bg-[#064E3B]">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-300">
                     Demand for {orgTarget}
                   </h2>
                 </div>
-                <div className="px-6 py-5">
-                  <p className="text-sm text-gray-800 leading-relaxed">{demand.demand_text}</p>
+                <div className="px-6 py-6 bg-gradient-to-b from-[#064E3B]/5 to-white">
+                  <p className="text-base font-semibold text-[#064E3B] leading-relaxed">
+                    &ldquo;{demand.demand_text}&rdquo;
+                  </p>
                 </div>
               </div>
             )}

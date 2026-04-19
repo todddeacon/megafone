@@ -381,7 +381,7 @@ export default function ExchangeSection({
   isOrgRep,
   isCreator,
 }: Props) {
-  if (questions.length === 0 && !isOrgRep) return null
+  if (questions.length === 0 && officialResponses.length === 0 && !isOrgRep) return null
 
   const isMultiRound = questions.some((q) => q.round > 1)
   const totalCount = questions.length
