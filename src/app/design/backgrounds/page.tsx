@@ -74,30 +74,30 @@ function PitchLinesBg() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <svg className="absolute w-full h-full" viewBox="0 0 1200 500" preserveAspectRatio="none" fill="none">
         {/* Halfway line */}
-        <line x1="600" y1="0" x2="600" y2="500" stroke="white" strokeWidth="1" opacity="0.06" />
+        <line x1="600" y1="0" x2="600" y2="500" stroke="white" strokeWidth="2" opacity="0.15" />
         {/* Centre circle */}
-        <circle cx="600" cy="250" r="120" stroke="white" strokeWidth="1" opacity="0.06" fill="none" />
+        <circle cx="600" cy="250" r="120" stroke="white" strokeWidth="2" opacity="0.15" fill="none" />
         {/* Centre spot */}
-        <circle cx="600" cy="250" r="4" fill="white" opacity="0.06" />
+        <circle cx="600" cy="250" r="6" fill="white" opacity="0.15" />
         {/* Left penalty box */}
-        <rect x="0" y="120" width="180" height="260" stroke="white" strokeWidth="1" opacity="0.05" fill="none" />
+        <rect x="0" y="120" width="180" height="260" stroke="white" strokeWidth="2" opacity="0.12" fill="none" />
         {/* Left goal area */}
-        <rect x="0" y="180" width="70" height="140" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
+        <rect x="0" y="180" width="70" height="140" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
         {/* Left penalty arc */}
-        <path d="M 180 200 A 60 60 0 0 1 180 300" stroke="white" strokeWidth="1" opacity="0.05" fill="none" />
+        <path d="M 180 200 A 60 60 0 0 1 180 300" stroke="white" strokeWidth="2" opacity="0.12" fill="none" />
         {/* Right penalty box */}
-        <rect x="1020" y="120" width="180" height="260" stroke="white" strokeWidth="1" opacity="0.05" fill="none" />
+        <rect x="1020" y="120" width="180" height="260" stroke="white" strokeWidth="2" opacity="0.12" fill="none" />
         {/* Right goal area */}
-        <rect x="1130" y="180" width="70" height="140" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
+        <rect x="1130" y="180" width="70" height="140" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
         {/* Right penalty arc */}
-        <path d="M 1020 200 A 60 60 0 0 0 1020 300" stroke="white" strokeWidth="1" opacity="0.05" fill="none" />
+        <path d="M 1020 200 A 60 60 0 0 0 1020 300" stroke="white" strokeWidth="2" opacity="0.12" fill="none" />
         {/* Corner arcs */}
-        <path d="M 0 30 A 30 30 0 0 0 30 0" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
-        <path d="M 1170 0 A 30 30 0 0 0 1200 30" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
-        <path d="M 30 500 A 30 30 0 0 0 0 470" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
-        <path d="M 1200 470 A 30 30 0 0 0 1170 500" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
+        <path d="M 0 40 A 40 40 0 0 0 40 0" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
+        <path d="M 1160 0 A 40 40 0 0 0 1200 40" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
+        <path d="M 40 500 A 40 40 0 0 0 0 460" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
+        <path d="M 1200 460 A 40 40 0 0 0 1160 500" stroke="white" strokeWidth="2" opacity="0.10" fill="none" />
         {/* Outer boundary */}
-        <rect x="2" y="2" width="1196" height="496" stroke="white" strokeWidth="1.5" opacity="0.04" fill="none" rx="2" />
+        <rect x="3" y="3" width="1194" height="494" stroke="white" strokeWidth="2.5" opacity="0.10" fill="none" rx="3" />
       </svg>
     </div>
   )
@@ -109,35 +109,42 @@ function PitchLinesBg() {
 function FloodlightsBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Top-left floodlight */}
+      {/* Top-left floodlight glow */}
       <div
-        className="absolute -top-20 -left-20 w-[600px] h-[600px]"
+        className="absolute -top-40 -left-40 w-[800px] h-[800px]"
         style={{
-          background: 'radial-gradient(ellipse at top left, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse at top left, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 30%, transparent 60%)',
         }}
       />
-      {/* Top-right floodlight */}
+      {/* Top-right floodlight glow */}
       <div
-        className="absolute -top-20 -right-20 w-[600px] h-[600px]"
+        className="absolute -top-40 -right-40 w-[800px] h-[800px]"
         style={{
-          background: 'radial-gradient(ellipse at top right, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse at top right, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 30%, transparent 60%)',
         }}
       />
       {/* Light beams from top-left */}
       <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 500" preserveAspectRatio="none" fill="none">
-        <line x1="0" y1="0" x2="400" y2="500" stroke="white" strokeWidth="0.5" opacity="0.04" />
-        <line x1="0" y1="0" x2="600" y2="500" stroke="white" strokeWidth="0.5" opacity="0.03" />
-        <line x1="0" y1="0" x2="800" y2="500" stroke="white" strokeWidth="0.5" opacity="0.02" />
-        {/* From top-right */}
-        <line x1="1200" y1="0" x2="800" y2="500" stroke="white" strokeWidth="0.5" opacity="0.04" />
-        <line x1="1200" y1="0" x2="600" y2="500" stroke="white" strokeWidth="0.5" opacity="0.03" />
-        <line x1="1200" y1="0" x2="400" y2="500" stroke="white" strokeWidth="0.5" opacity="0.02" />
+        <defs>
+          <linearGradient id="beamFade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="white" stopOpacity="0.20" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Left beams — wedge shapes */}
+        <polygon points="0,0 350,500 450,500" fill="url(#beamFade)" opacity="0.08" />
+        <polygon points="0,0 550,500 650,500" fill="url(#beamFade)" opacity="0.06" />
+        <polygon points="0,0 750,500 850,500" fill="url(#beamFade)" opacity="0.04" />
+        {/* Right beams */}
+        <polygon points="1200,0 850,500 750,500" fill="url(#beamFade)" opacity="0.08" />
+        <polygon points="1200,0 650,500 550,500" fill="url(#beamFade)" opacity="0.06" />
+        <polygon points="1200,0 450,500 350,500" fill="url(#beamFade)" opacity="0.04" />
       </svg>
-      {/* Subtle ambient glow at top */}
+      {/* Bright ambient glow at top centre */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px]"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[300px]"
         style={{
-          background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.04) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse at top, rgba(255,255,255,0.10) 0%, transparent 60%)',
         }}
       />
     </div>
@@ -150,40 +157,41 @@ function FloodlightsBg() {
 function KitStripesBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Bold diagonal stripes */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage: `repeating-linear-gradient(
             135deg,
             transparent,
-            transparent 60px,
-            rgba(255,255,255,0.03) 60px,
-            rgba(255,255,255,0.03) 62px,
-            transparent 62px,
-            transparent 120px
+            transparent 40px,
+            rgba(255,255,255,0.08) 40px,
+            rgba(255,255,255,0.08) 44px,
+            transparent 44px,
+            transparent 80px
           )`,
         }}
       />
-      {/* Wider accent stripes at different angle */}
+      {/* Wider accent stripes */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage: `repeating-linear-gradient(
             135deg,
             transparent,
-            transparent 180px,
-            rgba(255,255,255,0.015) 180px,
-            rgba(255,255,255,0.015) 195px,
-            transparent 195px,
-            transparent 360px
+            transparent 120px,
+            rgba(255,255,255,0.05) 120px,
+            rgba(255,255,255,0.05) 140px,
+            transparent 140px,
+            transparent 240px
           )`,
         }}
       />
-      {/* Subtle gradient overlay for depth */}
+      {/* Gradient overlay for depth and shine */}
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 40%, rgba(0,0,0,0.08) 100%)',
         }}
       />
     </div>
@@ -198,12 +206,13 @@ function GoalNetBg() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <svg className="absolute w-full h-full" preserveAspectRatio="none">
         <defs>
-          <pattern id="net" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 0 20 L 20 0 L 40 20 L 20 40 Z" stroke="white" strokeWidth="0.5" opacity="0.04" fill="none" />
+          <pattern id="net" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
+            <path d="M 0 18 L 18 0 L 36 18 L 18 36 Z" stroke="white" strokeWidth="1" opacity="0.12" fill="none" />
           </pattern>
-          {/* Fade mask — net fades out towards edges */}
-          <radialGradient id="netFade" cx="50%" cy="50%" r="60%">
+          {/* Fade mask — net visible in centre, fades at edges */}
+          <radialGradient id="netFade" cx="50%" cy="50%" r="55%">
             <stop offset="0%" stopColor="white" stopOpacity="1" />
+            <stop offset="70%" stopColor="white" stopOpacity="0.6" />
             <stop offset="100%" stopColor="white" stopOpacity="0" />
           </radialGradient>
           <mask id="netMask">
@@ -212,11 +221,11 @@ function GoalNetBg() {
         </defs>
         <rect width="100%" height="100%" fill="url(#net)" mask="url(#netMask)" />
       </svg>
-      {/* Subtle depth gradient */}
+      {/* Depth glow behind content area */}
       <div
         className="absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.03) 0%, transparent 60%)',
+          background: 'radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)',
         }}
       />
     </div>
@@ -229,31 +238,33 @@ function GoalNetBg() {
 function GrassStripesBg() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Alternating vertical mow stripes */}
+      {/* Bold alternating vertical mow stripes */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage: `repeating-linear-gradient(
             90deg,
             transparent,
-            transparent 80px,
-            rgba(255,255,255,0.02) 80px,
-            rgba(255,255,255,0.02) 160px
+            transparent 70px,
+            rgba(255,255,255,0.06) 70px,
+            rgba(255,255,255,0.06) 140px
           )`,
         }}
       />
-      {/* Subtle pitch curve arc — like a centre circle in the distance */}
+      {/* Pitch curve arcs — like a centre circle viewed from the stands */}
       <svg className="absolute w-full h-full" viewBox="0 0 1200 500" preserveAspectRatio="none" fill="none">
         {/* Large sweeping arc */}
-        <path d="M 300 500 Q 600 200 900 500" stroke="white" strokeWidth="1" opacity="0.04" fill="none" />
-        {/* Smaller inner arc */}
-        <path d="M 400 500 Q 600 280 800 500" stroke="white" strokeWidth="0.5" opacity="0.03" fill="none" />
+        <path d="M 200 520 Q 600 120 1000 520" stroke="white" strokeWidth="2.5" opacity="0.12" fill="none" />
+        {/* Inner arc */}
+        <path d="M 350 520 Q 600 220 850 520" stroke="white" strokeWidth="1.5" opacity="0.08" fill="none" />
+        {/* Halfway line */}
+        <line x1="600" y1="120" x2="600" y2="500" stroke="white" strokeWidth="1.5" opacity="0.08" />
       </svg>
-      {/* Top-down gradient to simulate perspective */}
+      {/* Top-down gradient for depth/perspective */}
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, transparent 40%, rgba(255,255,255,0.02) 100%)',
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.10) 0%, transparent 30%, rgba(255,255,255,0.04) 100%)',
         }}
       />
     </div>
