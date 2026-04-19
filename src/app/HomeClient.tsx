@@ -464,7 +464,7 @@ export default function HomeClient({ demands, supportedIds }: Props) {
               </div>
             )}
 
-            {!isSearching && sorted.length > 0 && (
+            {!isSearching && (
               <HowItWorks />
             )}
           </>
