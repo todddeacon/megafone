@@ -383,6 +383,28 @@ export default function ExchangeSection({
 }: Props) {
   if (questions.length === 0 && officialResponses.length === 0 && !isOrgRep) return null
 
+  // Petition mode: just render response items (no questions card, no response card wrapper)
+  if (questions.length === 0) {
+    const sortedResponses = [...officialResponses].sort((a, b) =>
+      b.created_at.localeCompare(a.created_at)
+    )
+
+    if (sortedResponses.length === 0) return null
+
+    return (
+      <div className="px-6 py-5">
+        <div className="relative">
+          <div className="absolute left-[5px] top-2 bottom-2 w-0.5 bg-emerald-200 rounded-full" />
+          <div className="space-y-6">
+            {sortedResponses.map((response, i) => (
+              <ResponseItem key={response.id} response={response} orgName={orgName} isOrgRep={isOrgRep} demandId={demandId} isLatest={i === 0} />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const isMultiRound = questions.some((q) => q.round > 1)
   const totalCount = questions.length
 

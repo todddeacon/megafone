@@ -48,6 +48,7 @@ export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): 
 
 import SupportButton from './SupportButton'
 import ExchangeSection from './ExchangeSection'
+import OfficialResponseForm from './OfficialResponseForm'
 import FollowUpCreatorTools from './FollowUpCreatorTools'
 import CreatorUpdateForm from './CreatorUpdateForm'
 import CreatorUpdatesSection from './CreatorUpdatesSection'
@@ -261,18 +262,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               )}
             </div>
 
-            {/* Summary */}
-            {demand.summary && (
-              <div className="border-l-4 border-[#064E3B]/20 pl-4">
-                <ExpandableText
-                  text={demand.summary}
-                  maxLines={3}
-                  className="text-base text-gray-600 leading-relaxed"
-                />
-              </div>
-            )}
-
-            {/* Demand section (petition) */}
+            {/* Demand section (petition) — directly after headline/directed at */}
             {isPetition && demand.demand_text && (
               <div className="rounded-2xl overflow-hidden border border-[#064E3B]/20">
                 <div className="px-6 py-4 bg-[#064E3B]">
@@ -288,17 +278,49 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               </div>
             )}
 
-            {/* Petition responses */}
+            {/* Summary / context */}
+            {demand.summary && (
+              <div className="border-l-4 border-[#064E3B]/20 pl-4">
+                <ExpandableText
+                  text={demand.summary}
+                  maxLines={3}
+                  className="text-base text-gray-600 leading-relaxed"
+                />
+              </div>
+            )}
+
+            {/* Petition responses (no questions card) */}
             {isPetition && (officialResponses.length > 0 || isOrgRep) && (
-              <ExchangeSection
-                demandId={id}
-                questions={[]}
-                officialResponses={officialResponses}
-                orgName={orgName}
-                orgTarget={orgTarget}
-                isOrgRep={isOrgRep}
-                isCreator={isCreator}
-              />
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
+                    Response from {orgName}
+                  </h2>
+                  {officialResponses.length > 0 && (
+                    <span className="text-xs font-semibold text-emerald-600">
+                      {officialResponses.length} {officialResponses.length === 1 ? 'response' : 'responses'}
+                    </span>
+                  )}
+                </div>
+
+                {officialResponses.length > 0 && (
+                  <ExchangeSection
+                    demandId={id}
+                    questions={[]}
+                    officialResponses={officialResponses}
+                    orgName={orgName}
+                    orgTarget={orgTarget}
+                    isOrgRep={isOrgRep}
+                    isCreator={isCreator}
+                  />
+                )}
+
+                {isOrgRep && (
+                  <div className="border-t border-emerald-100">
+                    <OfficialResponseForm demandId={id} />
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Questions + responses exchange (Q&A only) */}
