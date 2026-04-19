@@ -5,9 +5,10 @@ import { setResolutionStatus } from './actions'
 
 interface Props {
   demandId: string
+  isPetition?: boolean
 }
 
-const OPTIONS = [
+const QA_OPTIONS = [
   {
     value: 'resolved',
     label: 'Resolved',
@@ -46,7 +47,46 @@ const OPTIONS = [
   },
 ] as const
 
-export default function CreatorResolution({ demandId }: Props) {
+const PETITION_OPTIONS = [
+  {
+    value: 'accepted',
+    label: 'Accepted',
+    description: 'The organisation has agreed to the demand.',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    style: 'border-gray-200 hover:border-green-400 hover:bg-green-50 text-gray-700 hover:text-green-700',
+    activeStyle: 'border-green-400 bg-green-50 text-green-700',
+  },
+  {
+    value: 'partially_accepted',
+    label: 'Partially Accepted',
+    description: 'Some concessions were made but not the full demand.',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    style: 'border-gray-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700 hover:text-amber-700',
+    activeStyle: 'border-amber-400 bg-amber-50 text-amber-700',
+  },
+  {
+    value: 'rejected',
+    label: 'Rejected',
+    description: 'The organisation has declined the demand.',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    style: 'border-gray-200 hover:border-red-400 hover:bg-red-50 text-gray-700 hover:text-red-700',
+    activeStyle: 'border-red-400 bg-red-50 text-red-700',
+  },
+] as const
+
+export default function CreatorResolution({ demandId, isPetition = false }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +115,7 @@ export default function CreatorResolution({ demandId }: Props) {
       </div>
 
       <div className="space-y-2 mb-4">
-        {OPTIONS.map((opt) => (
+        {(isPetition ? PETITION_OPTIONS : QA_OPTIONS).map((opt) => (
           <button
             key={opt.value}
             type="button"

@@ -12,6 +12,7 @@ interface Demand {
   created_at: string
   is_example: boolean
   is_featured: boolean
+  campaign_type: string
   organisation: { id: string; name: string; slug: string } | null
   creator: { name: string } | null
 }
@@ -89,6 +90,15 @@ function DemandCard({ demand }: { demand: Demand }) {
 
       {/* Body */}
       <div className="p-5">
+        <div className="mb-2">
+          <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+            demand.campaign_type === 'petition'
+              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+              : 'bg-blue-50 text-blue-700 border border-blue-200'
+          }`}>
+            {demand.campaign_type === 'petition' ? 'Seeking change' : 'Seeking answers'}
+          </span>
+        </div>
         <h3 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-3 group-hover:text-[#064E3B] transition-colors mb-1">
           {demand.headline}
         </h3>

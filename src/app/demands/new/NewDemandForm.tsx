@@ -265,10 +265,12 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
   const formRef = useRef<HTMLFormElement>(null)
 
   // Controlled field state — needed to populate the preview
+  const [campaignType, setCampaignType] = useState<'qa' | 'petition'>('qa')
   const [headline, setHeadline] = useState('')
   const [organisationId, setOrganisationId] = useState('')
   const [suggestNewOrg, setSuggestNewOrg] = useState(false)
   const [summary, setSummary] = useState('')
+  const [demandText, setDemandText] = useState('')
   const [threshold, setThreshold] = useState('')
   const [questions, setQuestions] = useState([''])
   const [links, setLinks] = useState<{ url: string; title: string }[]>([{ url: '', title: '' }])
@@ -282,8 +284,9 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
   function handlePreview() {
     if (!headline.trim()) return setValidationError('Headline is required.')
     if (!organisationId && !suggestNewOrg) return setValidationError('Target organisation is required.')
-    if (!summary.trim()) return setValidationError('Summary is required.')
-    if (filledQuestions.length === 0) return setValidationError('At least one question is required.')
+    if (!summary.trim()) return setValidationError('Summary / context is required.')
+    if (campaignType === 'qa' && filledQuestions.length === 0) return setValidationError('At least one question is required.')
+    if (campaignType === 'petition' && !demandText.trim()) return setValidationError('The demand is required.')
     if (!threshold || parseInt(threshold) < 1) return setValidationError('Supporter target is required.')
     setValidationError(null)
     setShowPreview(true)
@@ -308,6 +311,37 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
     <div>
       {/* Hidden form — always in DOM so formAction can submit */}
       <form ref={formRef} action={formAction} className={showPreview ? 'hidden' : 'space-y-8'}>
+
+        {/* Campaign type selector */}
+        <div>
+          <label className={labelClass}>Campaign type</label>
+          <input type="hidden" name="campaign_type" value={campaignType} />
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold">
+            <button
+              type="button"
+              onClick={() => setCampaignType('qa')}
+              className={`flex-1 px-4 py-2.5 transition-colors ${
+                campaignType === 'qa' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Seeking answers
+            </button>
+            <button
+              type="button"
+              onClick={() => setCampaignType('petition')}
+              className={`flex-1 px-4 py-2.5 transition-colors ${
+                campaignType === 'petition' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Seeking change
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">
+            {campaignType === 'qa'
+              ? 'Ask specific questions and get answers from the organisation.'
+              : 'Demand a specific action or change from the organisation.'}
+          </p>
+        </div>
 
         {/* Headline */}
         <div>
@@ -421,42 +455,63 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           />
         </div>
 
-        {/* Questions */}
-        <div>
-          <label className={labelClass}>
-            Questions <span className="text-[#F59E0B]">*</span>
-          </label>
-          <div className="space-y-2">
-            {questions.map((q, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <span className="mt-2 text-sm font-bold text-gray-300 w-5 shrink-0">{i + 1}.</span>
-                <input
-                  type="text"
-                  name="question"
-                  value={q}
-                  onChange={(e) => updateQuestion(i, e.target.value)}
-                  placeholder={`Question ${i + 1}`}
-                  className={inputClass}
-                />
-                {questions.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeQuestion(i)}
-                    className="mt-2 text-gray-300 hover:text-red-400 transition-colors text-sm"
-                    aria-label="Remove question"
-                  >✕</button>
-                )}
-              </div>
-            ))}
+        {/* Questions (Q&A) or Demand (Petition) */}
+        {campaignType === 'qa' ? (
+          <div>
+            <label className={labelClass}>
+              Questions <span className="text-[#F59E0B]">*</span>
+            </label>
+            <div className="space-y-2">
+              {questions.map((q, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <span className="mt-2 text-sm font-bold text-gray-300 w-5 shrink-0">{i + 1}.</span>
+                  <input
+                    type="text"
+                    name="question"
+                    value={q}
+                    onChange={(e) => updateQuestion(i, e.target.value)}
+                    placeholder={`Question ${i + 1}`}
+                    className={inputClass}
+                  />
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(i)}
+                      className="mt-2 text-gray-300 hover:text-red-400 transition-colors text-sm"
+                      aria-label="Remove question"
+                    >✕</button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="mt-3 text-sm font-medium text-[#064E3B] hover:text-[#065F46] underline underline-offset-2 transition-colors"
+            >
+              + Add another question
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={addQuestion}
-            className="mt-3 text-sm font-medium text-[#064E3B] hover:text-[#065F46] underline underline-offset-2 transition-colors"
-          >
-            + Add another question
-          </button>
-        </div>
+        ) : (
+          <div>
+            <label htmlFor="demand_text" className={labelClass}>
+              The demand <span className="text-[#F59E0B]">*</span>
+            </label>
+            <textarea
+              id="demand_text"
+              name="demand_text"
+              required
+              rows={3}
+              value={demandText}
+              onChange={(e) => setDemandText(e.target.value)}
+              placeholder="State the specific action or change you want — e.g. 'We are calling on the club to reduce matchday ticket prices for under-18s by at least 50%'"
+              className={`${inputClass} resize-none`}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Be specific about what you want the organisation to do.
+            </p>
+          </div>
+        )}
 
         {/* Supporter target */}
         <div>

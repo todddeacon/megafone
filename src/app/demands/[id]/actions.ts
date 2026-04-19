@@ -832,15 +832,15 @@ export async function setResolutionStatus(
   if (demand.creator_user_id !== user.id && !(await canActAsCreator(user.email))) return { error: 'Only the campaign creator can mark the outcome.' }
   if (demand.status !== 'responded') return { error: 'The campaign must have a response before marking the outcome.' }
 
-  const valid = ['resolved', 'unsatisfactory', 'further_questions']
+  const valid = ['resolved', 'unsatisfactory', 'further_questions', 'accepted', 'partially_accepted', 'rejected']
   if (!valid.includes(resolution)) return { error: 'Invalid resolution.' }
 
   const { error: statusError } = await adminForRead.from('demands').update({ status: resolution }).eq('id', demandId)
   if (statusError) return { error: 'Failed to update campaign status. Please try again.' }
 
-  // Email supporters about the resolution (resolved or unsatisfactory only)
+  // Email supporters about the resolution
   try {
-  if (resolution === 'resolved' || resolution === 'unsatisfactory') {
+  if (['resolved', 'unsatisfactory', 'accepted', 'partially_accepted', 'rejected'].includes(resolution)) {
     const [{ data: creatorProfile }, { data: org }, { data: supporters }] = await Promise.all([
       supabase.from('profiles').select('name').eq('id', demand.creator_user_id).maybeSingle(),
       supabase.from('organisations').select('name').eq('id', demand.organisation_id).single(),

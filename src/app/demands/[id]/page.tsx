@@ -65,6 +65,10 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; dot: boo
   resolved:          { label: 'Resolved',                className: 'bg-emerald-50 border-emerald-100 text-emerald-700',  dot: false },
   unsatisfactory:    { label: 'Unsatisfactory response', className: 'bg-red-50 border-red-100 text-red-600',              dot: false },
   not_relevant:      { label: 'No longer relevant',      className: 'bg-gray-100 border-transparent text-gray-400',      dot: false },
+  // Petition-specific statuses
+  accepted:          { label: 'Accepted',                className: 'bg-emerald-50 border-emerald-100 text-emerald-700',  dot: false },
+  partially_accepted:{ label: 'Partially accepted',      className: 'bg-amber-50 border-amber-100 text-amber-700',        dot: false },
+  rejected:          { label: 'Rejected',                className: 'bg-red-50 border-red-100 text-red-600',              dot: false },
 }
 
 export default async function DemandPage({ params }: PageProps<'/demands/[id]'>) {
@@ -157,6 +161,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   const orgName = demand.organisation?.name ?? 'Organisation'
   const targetPerson = demand.target_person ?? null
   const orgTarget = targetPerson ? `${targetPerson} at ${orgName}` : orgName
+  const isPetition = demand.campaign_type === 'petition'
   const orgInitials = orgName.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('')
   const createdDate = new Date(demand.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -225,6 +230,16 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 )}
               </div>
 
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                  isPetition
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  {isPetition ? 'Seeking change' : 'Seeking answers'}
+                </span>
+              </div>
+
               <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold mb-3 ${statusClassName}`}>
                 {statusDot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
                 {statusLabel}
@@ -257,8 +272,35 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               </div>
             )}
 
-            {/* Questions + responses exchange */}
-            {(allQuestions.length > 0 || isOrgRep) && (
+            {/* Demand section (petition) */}
+            {isPetition && demand.demand_text && (
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 bg-[#064E3B]/[0.03] border-b border-gray-100">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    Demand for {orgTarget}
+                  </h2>
+                </div>
+                <div className="px-6 py-5">
+                  <p className="text-sm text-gray-800 leading-relaxed">{demand.demand_text}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Petition responses */}
+            {isPetition && (officialResponses.length > 0 || isOrgRep) && (
+              <ExchangeSection
+                demandId={id}
+                questions={[]}
+                officialResponses={officialResponses}
+                orgName={orgName}
+                orgTarget={orgTarget}
+                isOrgRep={isOrgRep}
+                isCreator={isCreator}
+              />
+            )}
+
+            {/* Questions + responses exchange (Q&A only) */}
+            {!isPetition && (allQuestions.length > 0 || isOrgRep) && (
               <ExchangeSection
                 demandId={id}
                 questions={allQuestions}
@@ -286,8 +328,8 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               />
             </div>
 
-            {/* Creator: add follow-up questions + notify org */}
-            {isCreator && (demand.status === 'responded' || demand.status === 'further_questions') && (
+            {/* Creator: add follow-up questions + notify org (Q&A only) */}
+            {!isPetition && isCreator && (demand.status === 'responded' || demand.status === 'further_questions') && (
               <FollowUpCreatorTools
                 demandId={id}
                 orgName={orgName}
@@ -364,11 +406,12 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               notifiedAt={notifiedAt}
               respondedAt={officialResponses[0]?.created_at ?? null}
               orgName={orgName}
+              isPetition={isPetition}
             />
 
             {/* Creator: mark outcome */}
             {isCreator && demand.status === 'responded' && (
-              <CreatorResolution demandId={id} />
+              <CreatorResolution demandId={id} isPetition={isPetition} />
             )}
 
 

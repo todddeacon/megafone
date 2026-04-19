@@ -22,6 +22,7 @@ export async function createDemand(
     return { error: 'You must be signed in to create a demand.' }
   }
 
+  const campaign_type = (formData.get('campaign_type') as string) === 'petition' ? 'petition' : 'qa'
   const headline = (formData.get('headline') as string)?.trim()
   let organisation_id = (formData.get('organisation_id') as string) || null
   const suggestNewOrg = formData.get('suggest_new_org') === 'true'
@@ -29,7 +30,8 @@ export async function createDemand(
   const newOrgContactName = (formData.get('new_org_contact_name') as string)?.trim() || null
   const newOrgContactEmail = (formData.get('new_org_contact_email') as string)?.trim() || null
   const summary = (formData.get('summary') as string)?.trim()
-  const questions = (formData.getAll('question') as string[]).filter((q) => q.trim())
+  const questions = campaign_type === 'qa' ? (formData.getAll('question') as string[]).filter((q) => q.trim()) : []
+  const demand_text = campaign_type === 'petition' ? (formData.get('demand_text') as string)?.trim() || null : null
   const target_person = (formData.get('target_person') as string)?.trim() || null
   const thresholdRaw = (formData.get('notification_threshold') as string)?.trim()
   const notification_threshold = thresholdRaw ? parseInt(thresholdRaw, 10) : null
@@ -38,7 +40,8 @@ export async function createDemand(
   if (!organisation_id && !suggestNewOrg) return { error: 'Target organisation is required.' }
   if (suggestNewOrg && !newOrgName) return { error: 'Organisation name is required.' }
   if (!summary) return { error: 'Summary is required.' }
-  if (questions.length === 0) return { error: 'At least one question is required.' }
+  if (campaign_type === 'qa' && questions.length === 0) return { error: 'At least one question is required.' }
+  if (campaign_type === 'petition' && !demand_text) return { error: 'The demand is required.' }
   if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
 
   // If suggesting a new org, create it as pending
@@ -89,6 +92,7 @@ export async function createDemand(
     .insert({
       organisation_id,
       creator_user_id: user.id,
+      campaign_type,
       headline,
       summary,
       status: 'building',
@@ -96,6 +100,7 @@ export async function createDemand(
       moderation_scores: Object.keys(moderation.scores).length > 0 ? moderation.scores : null,
       ...(notification_threshold !== null && { notification_threshold }),
       ...(target_person && { target_person }),
+      ...(demand_text && { demand_text }),
     })
     .select('id')
     .single()

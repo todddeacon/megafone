@@ -6,6 +6,7 @@ interface Props {
   notifiedAt: string | null
   respondedAt: string | null
   orgName: string
+  isPetition?: boolean
 }
 
 function daysBetween(from: string, to?: string | null): number {
@@ -34,6 +35,9 @@ function getStates(status: string): StepState[] {
       return ['done', 'done', 'done', 'done', 'done', 'active']
     case 'resolved':
     case 'unsatisfactory':
+    case 'accepted':
+    case 'partially_accepted':
+    case 'rejected':
       return ['done', 'done', 'done', 'done', 'done', 'done']
     default:
       return ['done', 'active', 'future', 'future', 'future', 'future']
@@ -44,6 +48,10 @@ const RESOLUTION = {
   resolved:           { label: 'Resolved',                icon: '✓', bg: 'bg-green-500',  text: 'text-green-700',  ring: 'ring-green-100'  },
   unsatisfactory:     { label: 'Unsatisfactory Response', icon: '✕', bg: 'bg-red-500',    text: 'text-red-600',    ring: 'ring-red-100'    },
   further_questions:  { label: 'Further Questions Asked', icon: '?', bg: 'bg-amber-500',  text: 'text-amber-700',  ring: 'ring-amber-100'  },
+  // Petition outcomes
+  accepted:           { label: 'Accepted',                icon: '✓', bg: 'bg-green-500',  text: 'text-green-700',  ring: 'ring-green-100'  },
+  partially_accepted: { label: 'Partially Accepted',      icon: '~', bg: 'bg-amber-500',  text: 'text-amber-700',  ring: 'ring-amber-100'  },
+  rejected:           { label: 'Rejected',                icon: '✕', bg: 'bg-red-500',    text: 'text-red-600',    ring: 'ring-red-100'    },
 } as const
 
 function CheckIcon() {
@@ -134,9 +142,9 @@ function Step({
   )
 }
 
-export default function CampaignStatus({ status, createdAt, notifiedAt, respondedAt, orgName }: Props) {
+export default function CampaignStatus({ status, createdAt, notifiedAt, respondedAt, orgName, isPetition = false }: Props) {
   const states = getStates(status)
-  const isTerminal = ['resolved', 'unsatisfactory', 'further_questions'].includes(status)
+  const isTerminal = ['resolved', 'unsatisfactory', 'further_questions', 'accepted', 'partially_accepted', 'rejected'].includes(status)
   const resolution = isTerminal ? RESOLUTION[status as keyof typeof RESOLUTION] : null
 
   const awaitingDays = notifiedAt ? daysBetween(notifiedAt, respondedAt) : null
@@ -153,25 +161,25 @@ export default function CampaignStatus({ status, createdAt, notifiedAt, responde
       <div className="p-6">
       <Step
         state={states[0]}
-        label="Campaign Launched"
+        label={isPetition ? 'Petition Launched' : 'Campaign Launched'}
         date={fmt(createdAt)}
       />
 
       <Step
         state={states[1]}
-        label="Building Supporters"
+        label={isPetition ? 'Building Signatures' : 'Building Supporters'}
         date={states[1] === 'done' && notifiedAt ? fmt(notifiedAt) : undefined}
       />
 
       <Step
         state={states[2]}
-        label={`${orgName} Notified`}
+        label={isPetition ? `Delivered to ${orgName}` : `${orgName} Notified`}
         date={states[2] === 'done' && notifiedAt ? fmt(notifiedAt) : undefined}
       />
 
       <Step
         state={states[3]}
-        label="Awaiting Response"
+        label={isPetition ? 'Awaiting Acknowledgement' : 'Awaiting Response'}
         date={
           states[3] === 'done' && responseTime !== null
             ? `${responseTime} ${responseTime === 1 ? 'day' : 'days'} to respond`
@@ -189,7 +197,7 @@ export default function CampaignStatus({ status, createdAt, notifiedAt, responde
 
       <Step
         state={states[4]}
-        label="Responded"
+        label={isPetition ? 'Acknowledged' : 'Responded'}
         date={states[4] === 'done' && respondedAt ? fmt(respondedAt) : undefined}
       />
 
