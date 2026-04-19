@@ -3,6 +3,7 @@
 import { useActionState, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn, signUp, signInWithProvider, signInWithMagicLink } from './actions'
+import GoalNet from '@/components/GoalNet'
 
 function LoginForm() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
@@ -21,8 +22,9 @@ function LoginForm() {
   // Show verification message after signup
   if (success) {
     return (
-      <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm">
+      <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12 relative">
+      <GoalNet variant="light" />
+        <div className="w-full max-w-sm relative z-10">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
             <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,8 +52,9 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
+    <main className="flex-1 bg-gray-50 flex items-center justify-center px-4 py-12 relative">
+      <GoalNet variant="light" />
+      <div className="w-full max-w-sm relative z-10">
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <p className="text-sm text-gray-500 mb-6">

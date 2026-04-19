@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import GoalNet from '@/components/GoalNet'
 
 interface Demand {
   id: string
@@ -290,8 +291,9 @@ function HeroCarousel({ items }: { items: Demand[] }) {
 
 function Hero({ featuredItems }: { featuredItems: Demand[] }) {
   return (
-    <section className="bg-[#064E3B] py-12 px-4">
-      <div className="mx-auto max-w-5xl">
+    <section className="bg-[#064E3B] py-12 px-4 relative">
+      <GoalNet variant="full" />
+      <div className="mx-auto max-w-5xl relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-center">
           {/* Copy */}
           <div>
@@ -323,9 +325,10 @@ function Hero({ featuredItems }: { featuredItems: Demand[] }) {
 
 function HowItWorks() {
   return (
-    <div className="bg-[#064E3B] rounded-2xl p-7 text-white">
-      <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-6">How it works</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+    <div className="bg-[#064E3B] rounded-2xl p-7 text-white relative overflow-hidden">
+      <GoalNet variant="contained" />
+      <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-6 relative z-10">How it works</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative z-10">
         {[
           { n: '01', title: 'Start a campaign', desc: 'Ask questions or demand change. Set out what you want from your club and why it matters.' },
           { n: '02', title: 'Build support', desc: 'Share your campaign. The more fans behind it, the harder it is to ignore.' },
@@ -523,12 +526,39 @@ export default function HomeClient({ demands, supportedIds }: Props) {
         )}
       </main>
 
-      <footer className="border-t border-gray-200 bg-white mt-auto">
-        <div className="mx-auto max-w-5xl px-4 py-6 flex flex-wrap gap-6 text-sm text-gray-400">
-          <a href="/about" className="hover:text-[#064E3B] transition-colors">About</a>
-          <a href="/contact" className="hover:text-[#064E3B] transition-colors">Contact</a>
-          <a href="/terms" className="hover:text-[#064E3B] transition-colors">Terms</a>
-          <a href="/privacy" className="hover:text-[#064E3B] transition-colors">Privacy</a>
+      <footer className="bg-[#064E3B] mt-auto relative">
+        <GoalNet variant="footer" />
+        <div className="mx-auto max-w-5xl px-4 py-10 relative z-10">
+          <div className="flex flex-wrap items-start justify-between gap-8">
+            <div>
+              <p className="text-lg font-black text-white tracking-tight mb-2">Megafone</p>
+              <p className="text-sm text-emerald-200 max-w-xs leading-relaxed">
+                When fans speak with one voice, sports organisations have to listen.
+              </p>
+            </div>
+            <div className="flex gap-8">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-3">Platform</p>
+                <div className="space-y-2">
+                  <a href="/#feed" className="block text-sm text-emerald-200 hover:text-white transition-colors">Browse campaigns</a>
+                  <a href="/demands/new" className="block text-sm text-emerald-200 hover:text-white transition-colors">Start a campaign</a>
+                  <a href="/about" className="block text-sm text-emerald-200 hover:text-white transition-colors">About</a>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-3">Legal</p>
+                <div className="space-y-2">
+                  <a href="/terms" className="block text-sm text-emerald-200 hover:text-white transition-colors">Terms</a>
+                  <a href="/privacy" className="block text-sm text-emerald-200 hover:text-white transition-colors">Privacy</a>
+                  <a href="/contact" className="block text-sm text-emerald-200 hover:text-white transition-colors">Contact</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white/10 mt-8 pt-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-xs text-emerald-300/60">&copy; 2026 Megafone. All rights reserved.</p>
+            <p className="text-xs text-emerald-300/60">hello@megafone.app</p>
+          </div>
         </div>
       </footer>
     </div>
