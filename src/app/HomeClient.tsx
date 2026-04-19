@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 
 interface Demand {
   id: string
@@ -241,9 +241,54 @@ function FeaturedCard({ demand }: { demand: Demand }) {
   )
 }
 
+// ─── Hero Carousel ──────────────────────────────────────────────────────────
+
+function HeroCarousel({ items }: { items: Demand[] }) {
+  const [current, setCurrent] = useState(0)
+
+  useEffect(() => {
+    if (items.length <= 1) return
+    const timer = setInterval(() => {
+      setCurrent((c) => (c + 1) % items.length)
+    }, 6000)
+    return () => clearInterval(timer)
+  }, [items.length])
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="relative">
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          className="transition-opacity duration-500"
+          style={{ opacity: i === current ? 1 : 0, position: i === current ? 'relative' : 'absolute', top: 0, left: 0, right: 0 }}
+        >
+          {i === current && <FeaturedCard demand={item} />}
+        </div>
+      ))}
+
+      {items.length > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                i === current ? 'bg-white w-4' : 'bg-white/30 hover:bg-white/50'
+              }`}
+              aria-label={`Show campaign ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
-function Hero({ featured }: { featured: Demand | null }) {
+function Hero({ featuredItems }: { featuredItems: Demand[] }) {
   return (
     <section className="bg-[#064E3B] py-12 px-4">
       <div className="mx-auto max-w-5xl">
@@ -266,8 +311,8 @@ function Hero({ featured }: { featured: Demand | null }) {
             </div>
           </div>
 
-          {/* Featured campaign card */}
-          {featured && <FeaturedCard demand={featured} />}
+          {/* Featured campaign carousel */}
+          <HeroCarousel items={featuredItems} />
         </div>
       </div>
     </section>
@@ -372,30 +417,37 @@ export default function HomeClient({ demands, supportedIds }: Props) {
     return list
   }, [demands, tab, search, supportedSet])
 
-  // Hero featured card: featured > example > highest support
-  const featured = useMemo(() => {
-    // 1. Admin-selected featured campaign
-    const featuredCampaign = demands.find((d) => d.is_featured)
-    if (featuredCampaign) return featuredCampaign
+  // Hero featured items: featured campaigns > example campaigns > highest support
+  const featuredItems = useMemo(() => {
+    const items: Demand[] = []
 
-    // 2. Example campaign (fallback)
-    const exampleCampaign = demands.find((d) => d.is_example)
-    if (exampleCampaign) return exampleCampaign
+    // 1. Admin-selected featured campaigns
+    const featuredCampaigns = demands.filter((d) => d.is_featured)
+    items.push(...featuredCampaigns)
 
-    // 3. Highest-support campaign
-    const active = demands.filter((d) => ACTIVE_STATUSES.has(d.status) && !d.is_example)
-    const pool = active.length > 0 ? active : demands.filter((d) => !d.is_example)
-    return pool.reduce((best, d) =>
-      d.support_count_cache > (best?.support_count_cache ?? -1) ? d : best,
-      null as Demand | null
-    )
+    // 2. Example campaigns
+    const exampleCampaigns = demands.filter((d) => d.is_example && !d.is_featured)
+    items.push(...exampleCampaigns)
+
+    // 3. If nothing, fall back to highest-support campaign
+    if (items.length === 0) {
+      const active = demands.filter((d) => ACTIVE_STATUSES.has(d.status) && !d.is_example)
+      const pool = active.length > 0 ? active : demands.filter((d) => !d.is_example)
+      const best = pool.reduce((b, d) =>
+        d.support_count_cache > (b?.support_count_cache ?? -1) ? d : b,
+        null as Demand | null
+      )
+      if (best) items.push(best)
+    }
+
+    return items
   }, [demands])
 
   const isSearching = search.trim().length > 0
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Hero featured={featured} />
+      <Hero featuredItems={featuredItems} />
 
       <main id="feed" className="flex-1 mx-auto max-w-5xl w-full px-4 py-8 space-y-5">
         {/* Search */}
