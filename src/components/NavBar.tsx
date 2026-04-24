@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import Logo from './Logo'
+import AnimatedLogo from './AnimatedLogo'
 import NavBarDropdown from './NavBarDropdown'
 
 export default async function NavBar() {
@@ -23,7 +23,7 @@ export default async function NavBar() {
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center gap-4">
         <a href="/" className="shrink-0 flex items-center gap-3">
           <div className="flex flex-col gap-0.5">
-            <Logo size="md" className="text-white" />
+            <AnimatedLogo />
             <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 leading-none sm:hidden">
               Fan Voice, Amplified
             </span>
