@@ -301,10 +301,10 @@ function Hero({ featuredItems }: { featuredItems: Demand[] }) {
           {/* Copy */}
           <div>
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight mb-4">
-              Get Answers.<br />Get Change.
+              Get Heard.<br />Get Answers.<br />Get Change.
             </h1>
             <p className="text-emerald-200 text-base max-w-sm leading-relaxed mb-7">
-              When fans speak with one voice, sports organisations have to listen. Start a campaign or add your support to one that matters.
+              Share your experience, ask the tough questions, or demand the change you want. When fans speak with one voice, sports organisations have to listen.
             </p>
             <div className="flex gap-3">
               <a
