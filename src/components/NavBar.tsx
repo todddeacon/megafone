@@ -25,11 +25,11 @@ export default async function NavBar() {
           <div className="flex flex-col gap-0.5">
             <Logo size="md" className="text-white" />
             <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400 leading-none sm:hidden">
-              Fan Voice, Amplified
+              YOUR VOICE AMPLIFIED
             </span>
           </div>
           <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-emerald-400 leading-none border-l border-emerald-700 pl-3">
-            Fan Voice, Amplified
+            YOUR VOICE AMPLIFIED
           </span>
         </a>
         <div className="flex items-center gap-3 ml-auto shrink-0">
