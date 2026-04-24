@@ -300,7 +300,7 @@ function Hero({ featuredItems }: { featuredItems: Demand[] }) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-center">
           {/* Copy */}
           <div>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-tight mb-4">
+            <h1 className="text-4xl sm:text-4xl font-black tracking-tight text-white leading-tight mb-4">
               Get Heard.<br />Get Answers.<br />Get Change.
             </h1>
             <p className="text-emerald-200 text-base max-w-sm leading-relaxed mb-7">
