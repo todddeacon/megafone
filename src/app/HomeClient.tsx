@@ -24,6 +24,17 @@ interface Props {
 }
 
 type Tab = 'trending' | 'latest' | 'supported' | 'supporting' | 'organisations'
+type TypeFilter = 'all' | 'review' | 'qa' | 'petition'
+
+const TYPE_BADGE: Record<'review' | 'qa' | 'petition', { label: string; className: string }> = {
+  review:   { label: 'Review',   className: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+  qa:       { label: 'Q&A',      className: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  petition: { label: 'Petition', className: 'bg-amber-50 text-amber-700 border border-amber-200' },
+}
+
+function typeBadge(t: string) {
+  return TYPE_BADGE[(t as 'review' | 'qa' | 'petition')] ?? TYPE_BADGE.qa
+}
 
 const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
   building:          { label: 'Building support',       dot: 'bg-gray-400',    badge: 'bg-gray-100 text-gray-500' },
@@ -92,12 +103,8 @@ function DemandCard({ demand }: { demand: Demand }) {
       {/* Body */}
       <div className="p-5">
         <div className="mb-2">
-          <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-            demand.campaign_type === 'petition'
-              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-              : 'bg-blue-50 text-blue-700 border border-blue-200'
-          }`}>
-            {demand.campaign_type === 'petition' ? 'Demand Change' : 'Ask Questions'}
+          <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${typeBadge(demand.campaign_type).className}`}>
+            {typeBadge(demand.campaign_type).label}
           </span>
         </div>
         <h3 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-3 group-hover:text-[#064E3B] transition-colors mb-1">
@@ -193,12 +200,8 @@ function FeaturedCard({ demand }: { demand: Demand }) {
         ) : (
           <span className="text-[10px] font-bold text-[#064E3B] uppercase tracking-widest">Trending right now</span>
         )}
-        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-          demand.campaign_type === 'petition'
-            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-            : 'bg-blue-50 text-blue-700 border border-blue-200'
-        }`}>
-          {demand.campaign_type === 'petition' ? 'Demand Change' : 'Ask Questions'}
+        <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${typeBadge(demand.campaign_type).className}`}>
+          {typeBadge(demand.campaign_type).label}
         </span>
       </div>
       <div className="flex items-center gap-2 mb-3">
@@ -361,6 +364,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function HomeClient({ demands, supportedIds }: Props) {
   const [tab, setTab] = useState<Tab>('trending')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [search, setSearch] = useState('')
 
   const supportedSet = useMemo(() => new Set(supportedIds), [supportedIds])
@@ -395,15 +399,21 @@ export default function HomeClient({ demands, supportedIds }: Props) {
     if (tab === 'organisations') return []
     // Exclude example campaigns from all tabs
     let list = demands.filter((d) => !d.is_example)
+    if (typeFilter !== 'all') {
+      list = list.filter((d) => d.campaign_type === typeFilter)
+    }
     if (tab === 'supporting') {
       list = list.filter((d) => supportedSet.has(d.id))
       list.sort((a, b) => (b.created_at > a.created_at ? 1 : -1))
     } else if (tab === 'trending') {
-      list.sort((a, b) =>
-        b.support_count_cache !== a.support_count_cache
-          ? b.support_count_cache - a.support_count_cache
-          : b.created_at > a.created_at ? 1 : -1
-      )
+      // Hot-rank style: support count decays with age so new items with some
+      // engagement surface alongside older popular ones.
+      const now = Date.now()
+      const score = (d: Demand) => {
+        const ageHours = Math.max(1, (now - new Date(d.created_at).getTime()) / 3600_000)
+        return (d.support_count_cache + 1) / Math.pow(ageHours + 2, 1.3)
+      }
+      list.sort((a, b) => score(b) - score(a))
     } else if (tab === 'latest') {
       list.sort((a, b) => (b.created_at > a.created_at ? 1 : -1))
     } else {
@@ -418,7 +428,7 @@ export default function HomeClient({ demands, supportedIds }: Props) {
       )
     }
     return list
-  }, [demands, tab, search, supportedSet])
+  }, [demands, tab, typeFilter, search, supportedSet])
 
   // Hero featured items: featured campaigns > example campaigns > highest support
   const featuredItems = useMemo(() => {
@@ -470,7 +480,29 @@ export default function HomeClient({ demands, supportedIds }: Props) {
           />
         </div>
 
-        {/* Tabs */}
+        {/* Type filter pills */}
+        <div className="flex gap-2 flex-wrap">
+          {([
+            { id: 'all',      label: 'All' },
+            { id: 'review',   label: 'Reviews' },
+            { id: 'qa',       label: 'Q&As' },
+            { id: 'petition', label: 'Petitions' },
+          ] as const).map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setTypeFilter(f.id)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                typeFilter === f.id
+                  ? 'bg-[#064E3B] text-white'
+                  : 'bg-white border border-gray-200 text-gray-500 hover:border-[#064E3B]/30 hover:text-[#064E3B]'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort tabs */}
         <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
           {TABS.map((t) => (
             <button

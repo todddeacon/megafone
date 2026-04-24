@@ -70,14 +70,22 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
 
   const { data: demands } = await supabase
     .from('demands')
-    .select('id, headline, status, support_count_cache, notification_threshold, created_at')
+    .select('id, headline, status, support_count_cache, notification_threshold, created_at, campaign_type, rating, reviewing_subject')
     .eq('organisation_id', org.id)
+    .eq('moderation_status', 'approved')
     .order('support_count_cache', { ascending: false })
 
   const total     = demands?.length ?? 0
   const active    = demands?.filter((d) => ACTIVE_STATUSES.has(d.status)).length ?? 0
   const responded = demands?.filter((d) => ['responded', 'resolved'].includes(d.status)).length ?? 0
   const initials  = orgInitials(org.name)
+
+  // Review aggregate — only shown if 10+ reviews
+  const reviews = (demands ?? []).filter((d) => d.campaign_type === 'review' && d.rating !== null && d.rating !== undefined)
+  const showAvgRating = reviews.length >= 10
+  const avgRating = showAvgRating
+    ? reviews.reduce((s, d) => s + (d.rating ?? 0), 0) / reviews.length
+    : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -128,17 +136,28 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
 
           {/* Stats */}
           {total > 0 && (
-            <div className="flex gap-8 mt-8 pt-6 border-t border-white/10">
+            <div className="flex flex-wrap gap-8 mt-8 pt-6 border-t border-white/10">
               {[
                 { n: total,     label: total === 1 ? 'campaign' : 'campaigns' },
-                { n: active,    label: active === 1 ? 'active' : 'active' },
-                { n: responded, label: responded === 1 ? 'responded' : 'responded' },
+                { n: active,    label: 'active' },
+                { n: responded, label: 'responded' },
               ].map(({ n, label }) => (
                 <div key={label}>
                   <p className="text-2xl font-black text-white leading-none">{n}</p>
                   <p className="text-xs text-emerald-300 mt-0.5 font-medium">{label}</p>
                 </div>
               ))}
+              {showAvgRating && avgRating !== null && (
+                <div>
+                  <p className="text-2xl font-black text-white leading-none flex items-center gap-1.5">
+                    {avgRating.toFixed(1)}
+                    <svg className="w-5 h-5 text-[#F59E0B]" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.366 2.446c-.784.57-1.84-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.652 9.154c-.784-.57-.381-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                    </svg>
+                  </p>
+                  <p className="text-xs text-emerald-300 mt-0.5 font-medium">from {reviews.length} reviews</p>
+                </div>
+              )}
             </div>
           )}
         </div>

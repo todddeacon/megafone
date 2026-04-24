@@ -117,18 +117,53 @@ const labelClass = 'block text-sm font-semibold text-gray-900 mb-1'
 // ── Preview ────────────────────────────────────────────────────────────────
 
 interface PreviewProps {
+  campaignType: 'review' | 'qa' | 'petition'
   headline: string
   orgName: string
   summary: string
   questions: string[]
   threshold: number
+  reviewingSubject: string
+  rating: number | null
+  reviewerDisplayMode: 'real_name' | 'nickname' | 'anonymous'
+  reviewerName: string | null
+  reviewerNickname: string | null
   onBack: () => void
   onPublish: () => void
   isPending: boolean
 }
 
-function CampaignPreview({ headline, orgName, summary, questions, threshold, onBack, onPublish, isPending }: PreviewProps) {
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg
+          key={n}
+          className={`w-5 h-5 ${n <= rating ? 'text-[#F59E0B]' : 'text-gray-200'}`}
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.366 2.446c-.784.57-1.84-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.652 9.154c-.784-.57-.381-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+        </svg>
+      ))}
+      <span className="ml-2 text-sm font-semibold text-gray-700 tabular-nums">{rating} / 5</span>
+    </div>
+  )
+}
+
+function CampaignPreview({
+  campaignType, headline, orgName, summary, questions, threshold,
+  reviewingSubject, rating, reviewerDisplayMode, reviewerName, reviewerNickname,
+  onBack, onPublish, isPending,
+}: PreviewProps) {
   const filled = questions.filter((q) => q.trim())
+
+  const displayedReviewerName =
+    reviewerDisplayMode === 'anonymous'
+      ? 'Anonymous'
+      : reviewerDisplayMode === 'nickname'
+      ? (reviewerNickname || reviewerName || 'You')
+      : (reviewerName || 'You')
 
   function OrgAvatar() {
     const initials = orgName.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
@@ -158,11 +193,17 @@ function CampaignPreview({ headline, orgName, summary, questions, threshold, onB
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-3 min-w-0">
-            <OrgAvatar />
+            {orgName && <OrgAvatar />}
             <div className="min-w-0">
-              <p className="text-xs font-medium text-gray-500">{orgName}</p>
-              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500 mt-1">
-                No response
+              {orgName && <p className="text-xs font-medium text-gray-500">{orgName}</p>}
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                campaignType === 'review'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : campaignType === 'petition'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+              } ${orgName ? 'mt-1' : ''}`}>
+                {campaignType === 'review' ? 'Review' : campaignType === 'petition' ? 'Petition' : 'Q&A'}
               </span>
             </div>
           </div>
@@ -170,67 +211,84 @@ function CampaignPreview({ headline, orgName, summary, questions, threshold, onB
         <h1 className="text-2xl font-black tracking-tight text-[#064E3B] leading-snug">
           {headline}
         </h1>
-      </div>
-
-      {/* Supporter count card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <div className="flex items-end justify-between mb-5">
-          <div>
-            <span className="text-3xl font-black text-[#064E3B] tracking-tight">{filled.length}</span>
-            <span className="ml-1.5 text-sm text-gray-400">{filled.length === 1 ? 'question' : 'questions'}</span>
-          </div>
-          <div className="text-right">
-            <span className="text-3xl font-black text-[#064E3B] tracking-tight">1</span>
-            <span className="ml-1.5 text-sm text-gray-400">supporter</span>
-          </div>
-        </div>
-        <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Notification target</span>
-            <span className="text-xs font-bold text-gray-900">
-              1 <span className="text-gray-400 font-normal">/ {threshold.toLocaleString('en-GB')}</span>
-            </span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-[#F59E0B] transition-all duration-500"
-              style={{ width: `${Math.min(100, (1 / threshold) * 100)}%` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-gray-400">
-            {threshold - 1} more {threshold - 1 === 1 ? 'supporter' : 'supporters'} needed to notify the organisation.
+        {campaignType === 'review' && reviewingSubject && (
+          <p className="mt-2 text-sm font-medium text-gray-600">{reviewingSubject}</p>
+        )}
+        {campaignType === 'review' && rating !== null && (
+          <div className="mt-4"><StarRow rating={rating} /></div>
+        )}
+        {campaignType === 'review' && (
+          <p className="mt-3 text-xs text-gray-400">
+            by <span className="text-gray-600 font-medium">{displayedReviewerName}</span>
           </p>
-        </div>
-        <div className="mt-4">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm font-semibold text-green-800">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            You&apos;ll be the first supporter
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Summary card */}
+      {/* Supporter count card — not shown for reviews */}
+      {campaignType !== 'review' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-end justify-between mb-5">
+            <div>
+              <span className="text-3xl font-black text-[#064E3B] tracking-tight">{filled.length}</span>
+              <span className="ml-1.5 text-sm text-gray-400">{filled.length === 1 ? 'question' : 'questions'}</span>
+            </div>
+            <div className="text-right">
+              <span className="text-3xl font-black text-[#064E3B] tracking-tight">1</span>
+              <span className="ml-1.5 text-sm text-gray-400">supporter</span>
+            </div>
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Notification target</span>
+              <span className="text-xs font-bold text-gray-900">
+                1 <span className="text-gray-400 font-normal">/ {threshold.toLocaleString('en-GB')}</span>
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[#F59E0B] transition-all duration-500"
+                style={{ width: `${Math.min(100, (1 / threshold) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              {threshold - 1} more {threshold - 1 === 1 ? 'supporter' : 'supporters'} needed to notify the organisation.
+            </p>
+          </div>
+          <div className="mt-4">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm font-semibold text-green-800">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              You&apos;ll be the first supporter
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary / review body card */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">Summary</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+          {campaignType === 'review' ? 'Review' : 'Summary'}
+        </h2>
         <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
       </div>
 
-      {/* Questions card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
-          Questions <span className="ml-2 text-gray-300">·</span> <span className="text-gray-400 normal-case font-normal">{filled.length}</span>
-        </h2>
-        <ol className="space-y-4">
-          {filled.map((q, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="text-xs font-bold text-gray-300 mt-0.5 w-5 shrink-0">{i + 1}.</span>
-              <p className="text-sm text-gray-800">{q}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
+      {/* Questions card — Q&A only */}
+      {campaignType === 'qa' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-4">
+            Questions <span className="ml-2 text-gray-300">·</span> <span className="text-gray-400 normal-case font-normal">{filled.length}</span>
+          </h2>
+          <ol className="space-y-4">
+            {filled.map((q, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="text-xs font-bold text-gray-300 mt-0.5 w-5 shrink-0">{i + 1}.</span>
+                <p className="text-sm text-gray-800">{q}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-2">
@@ -260,12 +318,20 @@ function CampaignPreview({ headline, orgName, summary, questions, threshold, onB
 
 // ── Form ───────────────────────────────────────────────────────────────────
 
-export default function NewDemandForm({ organisations }: { organisations: Organisation[] }) {
+export default function NewDemandForm({
+  organisations,
+  reviewerName,
+  reviewerNickname,
+}: {
+  organisations: Organisation[]
+  reviewerName?: string | null
+  reviewerNickname?: string | null
+}) {
   const [state, formAction, isPending] = useActionState(createDemand, { error: null })
   const formRef = useRef<HTMLFormElement>(null)
 
   // Controlled field state — needed to populate the preview
-  const [campaignType, setCampaignType] = useState<'qa' | 'petition'>('qa')
+  const [campaignType, setCampaignType] = useState<'review' | 'qa' | 'petition'>('review')
   const [headline, setHeadline] = useState('')
   const [organisationId, setOrganisationId] = useState('')
   const [suggestNewOrg, setSuggestNewOrg] = useState(false)
@@ -275,6 +341,11 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
   const [questions, setQuestions] = useState([''])
   const [links, setLinks] = useState<{ url: string; title: string }[]>([{ url: '', title: '' }])
 
+  // Review-specific state
+  const [reviewingSubject, setReviewingSubject] = useState('')
+  const [rating, setRating] = useState<number | null>(null)
+  const [reviewerDisplayMode, setReviewerDisplayMode] = useState<'real_name' | 'nickname' | 'anonymous'>('real_name')
+
   const [showPreview, setShowPreview] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
 
@@ -283,11 +354,20 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
 
   function handlePreview() {
     if (!headline.trim()) return setValidationError('Headline is required.')
-    if (!organisationId && !suggestNewOrg) return setValidationError('Target organisation is required.')
-    if (!summary.trim()) return setValidationError('Summary / context is required.')
-    if (campaignType === 'qa' && filledQuestions.length === 0) return setValidationError('At least one question is required.')
-    if (campaignType === 'petition' && !demandText.trim()) return setValidationError('The demand is required.')
-    if (!threshold || parseInt(threshold) < 1) return setValidationError('Supporter target is required.')
+
+    if (campaignType === 'review') {
+      if (!reviewingSubject.trim()) return setValidationError('What you are reviewing is required.')
+      if (!summary.trim()) return setValidationError('Review text is required.')
+      if (summary.trim().length < 50) return setValidationError('Review text must be at least 50 characters.')
+      if (rating === null) return setValidationError('Rating is required.')
+    } else {
+      if (!organisationId && !suggestNewOrg) return setValidationError('Target organisation is required.')
+      if (!summary.trim()) return setValidationError('Summary / context is required.')
+      if (campaignType === 'qa' && filledQuestions.length === 0) return setValidationError('At least one question is required.')
+      if (campaignType === 'petition' && !demandText.trim()) return setValidationError('The demand is required.')
+      if (!threshold || parseInt(threshold) < 1) return setValidationError('Supporter target is required.')
+    }
+
     setValidationError(null)
     setShowPreview(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -319,12 +399,21 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold">
             <button
               type="button"
+              onClick={() => setCampaignType('review')}
+              className={`flex-1 px-4 py-2.5 transition-colors ${
+                campaignType === 'review' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Review
+            </button>
+            <button
+              type="button"
               onClick={() => setCampaignType('qa')}
               className={`flex-1 px-4 py-2.5 transition-colors ${
                 campaignType === 'qa' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Ask Questions
+              Q&A
             </button>
             <button
               type="button"
@@ -333,11 +422,13 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
                 campaignType === 'petition' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              Demand Change
+              Petition
             </button>
           </div>
           <p className="mt-1 text-xs text-gray-400">
-            {campaignType === 'qa'
+            {campaignType === 'review'
+              ? 'Share your experience or feedback about a club, event, or organisation.'
+              : campaignType === 'qa'
               ? 'Ask specific questions and get answers from the organisation.'
               : 'Demand a specific action or change from the organisation.'
             }
@@ -354,19 +445,52 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
             name="headline"
             type="text"
             required
-            maxLength={140}
+            maxLength={campaignType === 'review' ? 100 : 140}
             value={headline}
             onChange={(e) => setHeadline(e.target.value)}
-            placeholder="e.g. Manchester United must address the stadium expansion plans"
+            placeholder={
+              campaignType === 'review'
+                ? 'e.g. Worst matchday experience I have ever had at the Emirates'
+                : 'e.g. Manchester United must address the stadium expansion plans'
+            }
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-gray-400">Keep it short and direct. Max 140 characters.</p>
+          <p className="mt-1 text-xs text-gray-400">
+            Keep it short and direct. Max {campaignType === 'review' ? 100 : 140} characters.
+          </p>
         </div>
+
+        {/* What are you reviewing? (review only) */}
+        {campaignType === 'review' && (
+          <div>
+            <label htmlFor="reviewing_subject" className={labelClass}>
+              What are you reviewing? <span className="text-[#F59E0B]">*</span>
+            </label>
+            <input
+              id="reviewing_subject"
+              name="reviewing_subject"
+              type="text"
+              maxLength={150}
+              value={reviewingSubject}
+              onChange={(e) => setReviewingSubject(e.target.value)}
+              placeholder="e.g. Arsenal vs Chelsea at Emirates, 15 Mar 2026"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              A specific event, service, or experience. Max 150 characters.
+            </p>
+          </div>
+        )}
 
         {/* Target organisation */}
         <div>
           <label className={labelClass}>
-            Target organisation <span className="text-[#F59E0B]">*</span>
+            {campaignType === 'review' ? 'Tag an organisation' : 'Target organisation'}{' '}
+            {campaignType === 'review' ? (
+              <span className="font-normal text-gray-400">(optional)</span>
+            ) : (
+              <span className="text-[#F59E0B]">*</span>
+            )}
           </label>
           {!suggestNewOrg ? (
             <>
@@ -422,22 +546,24 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           )}
         </div>
 
-        {/* Target person or group */}
-        <div>
-          <label htmlFor="target_person" className={labelClass}>
-            Target person or group <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <input
-            id="target_person"
-            name="target_person"
-            type="text"
-            placeholder="e.g. The Board, Director of Football, CEO"
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            Who specifically at the organisation should answer these questions?
-          </p>
-        </div>
+        {/* Target person or group (not shown for reviews) */}
+        {campaignType !== 'review' && (
+          <div>
+            <label htmlFor="target_person" className={labelClass}>
+              Target person or group <span className="font-normal text-gray-400">(optional)</span>
+            </label>
+            <input
+              id="target_person"
+              name="target_person"
+              type="text"
+              placeholder="e.g. The Board, Director of Football, CEO"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Who specifically at the organisation should answer these questions?
+            </p>
+          </div>
+        )}
 
         {/* Petition: demand field before summary */}
         {campaignType === 'petition' && (
@@ -461,22 +587,113 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           </div>
         )}
 
-        {/* Summary */}
+        {/* Summary / review body */}
         <div>
           <label htmlFor="summary" className={labelClass}>
-            Summary / context <span className="text-[#F59E0B]">*</span>
+            {campaignType === 'review' ? 'Your review' : 'Summary / context'}{' '}
+            <span className="text-[#F59E0B]">*</span>
           </label>
           <textarea
             id="summary"
             name="summary"
             required
-            rows={4}
+            rows={campaignType === 'review' ? 6 : 4}
+            minLength={campaignType === 'review' ? 50 : undefined}
+            maxLength={campaignType === 'review' ? 2000 : undefined}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            placeholder="Explain the background and why this matters…"
+            placeholder={
+              campaignType === 'review'
+                ? 'Describe your experience in detail. What happened, what worked, what did not?'
+                : 'Explain the background and why this matters…'
+            }
             className={`${inputClass} resize-none`}
           />
+          {campaignType === 'review' && (
+            <p className="mt-1 text-xs text-gray-400">
+              {summary.length} / 2000 characters · minimum 50
+            </p>
+          )}
         </div>
+
+        {/* Rating (review only) */}
+        {campaignType === 'review' && (
+          <div>
+            <label className={labelClass}>
+              Your rating <span className="text-[#F59E0B]">*</span>
+            </label>
+            <input type="hidden" name="rating" value={rating ?? ''} />
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setRating(n)}
+                  aria-label={`${n} star${n === 1 ? '' : 's'}`}
+                  className={`flex items-center justify-center rounded-md border transition-colors ${
+                    rating === n
+                      ? 'bg-[#F59E0B] border-[#F59E0B] text-white'
+                      : 'border-gray-200 text-gray-400 hover:border-[#F59E0B] hover:text-[#F59E0B]'
+                  } w-11 h-11`}
+                >
+                  {n === 0 ? (
+                    <span className="text-sm font-bold">0</span>
+                  ) : (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.366 2.446c-.784.57-1.84-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.652 9.154c-.784-.57-.381-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+              <span className="ml-3 text-sm font-semibold text-gray-700">
+                {rating === null ? 'Select a rating' : `${rating} / 5`}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              0 means completely unacceptable. 5 means excellent.
+            </p>
+          </div>
+        )}
+
+        {/* Display name choice (review only) */}
+        {campaignType === 'review' && (
+          <div>
+            <label className={labelClass}>How should we show your name?</label>
+            <input type="hidden" name="reviewer_display_mode" value={reviewerDisplayMode} />
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold">
+              <button
+                type="button"
+                onClick={() => setReviewerDisplayMode('real_name')}
+                className={`flex-1 px-3 py-2 transition-colors ${
+                  reviewerDisplayMode === 'real_name' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                My name
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewerDisplayMode('nickname')}
+                className={`flex-1 px-3 py-2 transition-colors ${
+                  reviewerDisplayMode === 'nickname' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                My nickname
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewerDisplayMode('anonymous')}
+                className={`flex-1 px-3 py-2 transition-colors ${
+                  reviewerDisplayMode === 'anonymous' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                Anonymous
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              Anonymous reviews are public but your identity stays private. Admins retain access for moderation.
+            </p>
+          </div>
+        )}
 
         {/* Questions (Q&A only) */}
         {campaignType === 'qa' ? (
@@ -517,26 +734,28 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
           </div>
         ) : null}
 
-        {/* Supporter target */}
-        <div>
-          <label htmlFor="notification_threshold" className={labelClass}>
-            Supporter target <span className="text-[#F59E0B]">*</span>
-          </label>
-          <input
-            id="notification_threshold"
-            name="notification_threshold"
-            type="number"
-            required
-            min={100}
-            value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
-            placeholder="e.g. 500"
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            Minimum 100. The number of supporters needed before the organisation is notified.
-          </p>
-        </div>
+        {/* Supporter target (not shown for reviews) */}
+        {campaignType !== 'review' && (
+          <div>
+            <label htmlFor="notification_threshold" className={labelClass}>
+              Supporter target <span className="text-[#F59E0B]">*</span>
+            </label>
+            <input
+              id="notification_threshold"
+              name="notification_threshold"
+              type="number"
+              required
+              min={100}
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder="e.g. 500"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Minimum 100. The number of supporters needed before the organisation is notified.
+            </p>
+          </div>
+        )}
 
         {/* Links */}
         <div>
@@ -608,11 +827,17 @@ export default function NewDemandForm({ organisations }: { organisations: Organi
       {/* Preview panel */}
       {showPreview && (
         <CampaignPreview
+          campaignType={campaignType}
           headline={headline}
           orgName={selectedOrg?.name ?? ''}
           summary={summary}
           questions={questions}
-          threshold={parseInt(threshold)}
+          threshold={parseInt(threshold || '0')}
+          reviewingSubject={reviewingSubject}
+          rating={rating}
+          reviewerDisplayMode={reviewerDisplayMode}
+          reviewerName={reviewerName ?? null}
+          reviewerNickname={reviewerNickname ?? null}
           onBack={() => { setShowPreview(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
           onPublish={handlePublish}
           isPending={isPending}

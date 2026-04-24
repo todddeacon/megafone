@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { cookies, headers } from 'next/headers'
+import { createHash, randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSupporterEmail, sendCampaignSentEmail, sendCampaignResolvedEmail, sendCreatorUpdateEmail, sendCreatorFirstSupporterEmail, sendCreatorMilestoneEmail, sendCreatorTargetReachedEmail, sendCreatorResponseReceivedEmail, sendOrgWelcomeEmail, sendOrgCreatorUpdateEmail } from '@/lib/email'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
@@ -8,6 +10,201 @@ import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 import { canActAsCreator, canActAsOrgRep } from '@/lib/admin-mode'
 
 export type ActionState = { error: string | null }
+
+const AGREE_COOKIE = 'mf_agree_id'
+const AGREE_RATE_LIMIT_WINDOW_MS = 60_000
+const AGREE_RATE_LIMIT_MAX = 10
+
+function hashIp(ip: string | null | undefined): string | null {
+  if (!ip) return null
+  const salt = process.env.AGREE_IP_SALT ?? 'mf-agree-salt'
+  return createHash('sha256').update(`${salt}:${ip}`).digest('hex').slice(0, 32)
+}
+
+async function getClientIp(): Promise<string | null> {
+  const h = await headers()
+  const fwd = h.get('x-forwarded-for')
+  if (fwd) return fwd.split(',')[0]!.trim()
+  return h.get('x-real-ip')
+}
+
+export async function toggleReviewResolved(demandId: string): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const admin = createAdminClient()
+  const { data: demand } = await admin
+    .from('demands')
+    .select('id, organisation_id, campaign_type, resolved_by_org')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Review not found.' }
+  if (demand.campaign_type !== 'review') return { error: 'This action only applies to reviews.' }
+  if (!demand.organisation_id) return { error: 'This review is not tagged to an organisation.' }
+
+  const { data: rep } = await supabase
+    .from('org_reps')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('organisation_id', demand.organisation_id)
+    .maybeSingle()
+
+  if (!rep && !(await canActAsOrgRep(user.email))) {
+    return { error: 'Only verified organisation representatives can update this.' }
+  }
+
+  const nowResolved = !demand.resolved_by_org
+
+  const { error } = await admin
+    .from('demands')
+    .update({
+      resolved_by_org: nowResolved,
+      resolved_by_org_at: nowResolved ? new Date().toISOString() : null,
+      resolved_by_org_user_id: nowResolved ? user.id : null,
+    })
+    .eq('id', demandId)
+
+  if (error) return { error: 'Failed to update review status.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidatePath('/dashboard')
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
+export async function postReviewReply(
+  demandId: string,
+  prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in.' }
+
+  const admin = createAdminClient()
+  const { data: demand } = await admin
+    .from('demands')
+    .select('id, organisation_id, campaign_type')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Review not found.' }
+  if (demand.campaign_type !== 'review') return { error: 'This action only applies to reviews.' }
+  if (!demand.organisation_id) return { error: 'This review is not tagged to an organisation.' }
+
+  const { data: rep } = await supabase
+    .from('org_reps')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('organisation_id', demand.organisation_id)
+    .maybeSingle()
+
+  if (!rep && !(await canActAsOrgRep(user.email))) {
+    return { error: 'Only verified organisation representatives can reply.' }
+  }
+
+  const body = (formData.get('body') as string)?.trim()
+  if (!body) return { error: 'Reply cannot be empty.' }
+  if (body.length > 2000) return { error: 'Reply must be under 2000 characters.' }
+
+  const profanityMatch = checkProfanity(body, 'comment')
+  if (profanityMatch) return { error: 'Your reply contains language that doesn\'t meet our community guidelines.' }
+
+  const moderation = await checkModeration(body)
+  if (moderation.action !== 'approve') {
+    return { error: 'Your reply contains content that doesn\'t meet our community guidelines.' }
+  }
+
+  const { error: insertError } = await admin
+    .from('demand_updates')
+    .insert({
+      demand_id: demandId,
+      author_user_id: user.id,
+      type: 'official_response',
+      body,
+    })
+
+  if (insertError) return { error: 'Failed to post reply. Please try again.' }
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidatePath('/dashboard')
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  return { error: null }
+}
+
+export async function agreeWithReview(demandId: string): Promise<ActionState> {
+  // Ensure target exists and is a review
+  const admin = createAdminClient()
+  const { data: demand } = await admin
+    .from('demands')
+    .select('id, campaign_type, moderation_status, support_count_cache')
+    .eq('id', demandId)
+    .single()
+
+  if (!demand) return { error: 'Campaign not found.' }
+  if (demand.campaign_type !== 'review') return { error: 'This action only applies to reviews.' }
+  if (demand.moderation_status && demand.moderation_status !== 'approved') {
+    return { error: 'This review is not yet available.' }
+  }
+
+  // Cookie-based identity (set one if missing)
+  const cookieStore = await cookies()
+  let cookieId = cookieStore.get(AGREE_COOKIE)?.value
+  if (!cookieId) {
+    cookieId = randomUUID()
+    cookieStore.set(AGREE_COOKIE, cookieId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: '/',
+    })
+  }
+
+  // Authenticated user, if any
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // IP-based rate limit: max N inserts per minute from the same IP (spam defence)
+  const ip = await getClientIp()
+  const ipHash = hashIp(ip)
+  if (ipHash) {
+    const since = new Date(Date.now() - AGREE_RATE_LIMIT_WINDOW_MS).toISOString()
+    const { count: recentCount } = await admin
+      .from('review_agrees')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip_hash', ipHash)
+      .gte('created_at', since)
+
+    if ((recentCount ?? 0) >= AGREE_RATE_LIMIT_MAX) {
+      return { error: 'You are clicking too fast. Try again in a moment.' }
+    }
+  }
+
+  // Insert — UNIQUE (demand_id, cookie_id) handles dedup
+  const { error: insertError } = await admin
+    .from('review_agrees')
+    .insert({
+      demand_id: demandId,
+      cookie_id: cookieId,
+      ip_hash: ipHash,
+      user_id: user?.id ?? null,
+    })
+
+  if (insertError) {
+    if (insertError.code === '23505') return { error: 'You have already agreed with this review.' }
+    return { error: 'Could not record your agreement. Please try again.' }
+  }
+
+  await admin.rpc('increment_support_count', { demand_id_input: demandId })
+
+  revalidatePath(`/demands/${demandId}`)
+  revalidateTag(`demand-${demandId}`, { expire: 0 })
+  revalidateTag('demands-list', { expire: 0 })
+  return { error: null }
+}
 
 export async function setNickname(nickname: string): Promise<ActionState> {
   const supabase = await createClient()

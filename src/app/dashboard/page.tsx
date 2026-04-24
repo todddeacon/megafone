@@ -78,7 +78,7 @@ export default async function DashboardPage() {
   const [{ data: orgs }, { data: demands }] = await Promise.all([
     admin.from('organisations').select('id, name, slug, type, description, logo_url, is_claimed').in('id', orgIds),
     admin.from('demands')
-      .select('id, headline, status, support_count_cache, created_at, organisation_id, moderation_status')
+      .select('id, headline, status, support_count_cache, created_at, organisation_id, moderation_status, campaign_type, rating, reviewing_subject, resolved_by_org')
       .in('organisation_id', orgIds)
       .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false }),
@@ -139,8 +139,16 @@ export default async function DashboardPage() {
 
         {organisations.map((org) => {
           const orgCampaigns = campaigns.filter((d) => d.organisation_id === org.id)
-          const awaitingResponse = orgCampaigns.filter((d) => d.status === 'notified' || d.status === 'further_questions')
+          const orgReviews = orgCampaigns.filter((d) => d.campaign_type === 'review')
+          const orgNonReviews = orgCampaigns.filter((d) => d.campaign_type !== 'review')
+          const awaitingResponse = orgNonReviews.filter((d) => d.status === 'notified' || d.status === 'further_questions')
+          const unresolvedReviews = orgReviews.filter((d) => !d.resolved_by_org)
           const totalSupporters = orgCampaigns.reduce((sum, d) => sum + (d.support_count_cache ?? 0), 0)
+          const reviewsWithRating = orgReviews.filter((d) => d.rating !== null && d.rating !== undefined)
+          const avgRating =
+            reviewsWithRating.length >= 10
+              ? reviewsWithRating.reduce((s, d) => s + (d.rating ?? 0), 0) / reviewsWithRating.length
+              : null
 
           return (
             <div key={org.id} className="mb-12">
@@ -156,9 +164,9 @@ export default async function DashboardPage() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
-                  <p className="text-2xl font-black text-[#064E3B]">{orgCampaigns.length}</p>
+                  <p className="text-2xl font-black text-[#064E3B]">{orgNonReviews.length}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Campaigns</p>
                 </div>
                 <div className={`rounded-xl border px-5 py-4 ${awaitingResponse.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
@@ -167,9 +175,18 @@ export default async function DashboardPage() {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">Awaiting response</p>
                 </div>
+                <div className={`rounded-xl border px-5 py-4 ${unresolvedReviews.length > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
+                  <p className={`text-2xl font-black ${unresolvedReviews.length > 0 ? 'text-emerald-700' : 'text-[#064E3B]'}`}>
+                    {unresolvedReviews.length}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    New reviews
+                    {avgRating !== null && ` · ${avgRating.toFixed(1)}★ avg`}
+                  </p>
+                </div>
                 <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                   <p className="text-2xl font-black text-[#064E3B]">{totalSupporters.toLocaleString()}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Total supporters</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Total engagement</p>
                 </div>
               </div>
 
@@ -207,16 +224,61 @@ export default async function DashboardPage() {
                 </div>
               )}
 
-              {/* All campaigns */}
+              {/* Reviews */}
+              {orgReviews.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-3">
+                    Reviews ({orgReviews.length})
+                    {avgRating !== null && (
+                      <span className="ml-2 text-gray-400 normal-case font-normal">
+                        {avgRating.toFixed(1)}★ across {reviewsWithRating.length} reviews
+                      </span>
+                    )}
+                  </h3>
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+                    {orgReviews.map((d) => (
+                      <Link
+                        key={d.id}
+                        href={`/demands/${d.id}`}
+                        className="block px-5 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{d.headline}</p>
+                            <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                              {d.rating !== null && d.rating !== undefined && (
+                                <span className="font-semibold text-amber-600">{d.rating}★</span>
+                              )}
+                              {d.reviewing_subject && (
+                                <span className="truncate">· {d.reviewing_subject}</span>
+                              )}
+                              <span className="shrink-0">· {new Date(d.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                            </p>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            d.resolved_by_org
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {d.resolved_by_org ? '✓ Dealt with' : 'New'}
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All campaigns (excludes reviews — shown in their own section above) */}
               <div className="mb-8">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">All campaigns</h3>
-                {orgCampaigns.length === 0 ? (
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Campaigns</h3>
+                {orgNonReviews.length === 0 ? (
                   <p className="text-sm text-gray-400 bg-white rounded-xl border border-gray-200 px-5 py-8 text-center">
                     No campaigns directed at {org.name} yet.
                   </p>
                 ) : (
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
-                    {orgCampaigns.map((d) => {
+                    {orgNonReviews.map((d) => {
                       const s = STATUS_CONFIG[d.status] ?? { label: d.status, className: 'bg-gray-100 text-gray-500' }
                       return (
                         <Link

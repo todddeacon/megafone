@@ -22,7 +22,10 @@ export async function createDemand(
     return { error: 'You must be signed in to create a demand.' }
   }
 
-  const campaign_type = (formData.get('campaign_type') as string) === 'petition' ? 'petition' : 'qa'
+  const rawCampaignType = formData.get('campaign_type') as string
+  const campaign_type: 'review' | 'qa' | 'petition' =
+    rawCampaignType === 'review' ? 'review' : rawCampaignType === 'petition' ? 'petition' : 'qa'
+
   const headline = (formData.get('headline') as string)?.trim()
   let organisation_id = (formData.get('organisation_id') as string) || null
   const suggestNewOrg = formData.get('suggest_new_org') === 'true'
@@ -32,21 +35,43 @@ export async function createDemand(
   const summary = (formData.get('summary') as string)?.trim()
   const questions = campaign_type === 'qa' ? (formData.getAll('question') as string[]).filter((q) => q.trim()) : []
   const demand_text = campaign_type === 'petition' ? (formData.get('demand_text') as string)?.trim() || null : null
-  const target_person = (formData.get('target_person') as string)?.trim() || null
+  const target_person = campaign_type !== 'review' ? (formData.get('target_person') as string)?.trim() || null : null
   const thresholdRaw = (formData.get('notification_threshold') as string)?.trim()
   const notification_threshold = thresholdRaw ? parseInt(thresholdRaw, 10) : null
 
+  // Review-specific fields
+  const reviewing_subject = campaign_type === 'review' ? (formData.get('reviewing_subject') as string)?.trim() || null : null
+  const ratingRaw = campaign_type === 'review' ? (formData.get('rating') as string)?.trim() : null
+  const rating = ratingRaw !== null && ratingRaw !== '' ? parseInt(ratingRaw, 10) : null
+  const displayModeRaw = formData.get('reviewer_display_mode') as string | null
+  const reviewer_display_mode: 'real_name' | 'nickname' | 'anonymous' | null =
+    campaign_type === 'review'
+      ? (displayModeRaw === 'anonymous' || displayModeRaw === 'nickname' ? displayModeRaw : 'real_name')
+      : null
+
   if (!headline) return { error: 'Headline is required.' }
-  if (!organisation_id && !suggestNewOrg) return { error: 'Target organisation is required.' }
-  if (suggestNewOrg && !newOrgName) return { error: 'Organisation name is required.' }
-  if (!summary) return { error: 'Summary is required.' }
-  if (campaign_type === 'qa' && questions.length === 0) return { error: 'At least one question is required.' }
-  if (campaign_type === 'petition' && !demand_text) return { error: 'The demand is required.' }
-  if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
+
+  if (campaign_type === 'review') {
+    if (!reviewing_subject) return { error: 'What you are reviewing is required.' }
+    if (!summary) return { error: 'Review text is required.' }
+    if (summary.length < 50) return { error: 'Review text must be at least 50 characters.' }
+    if (summary.length > 2000) return { error: 'Review text must be at most 2000 characters.' }
+    if (rating === null || Number.isNaN(rating) || rating < 0 || rating > 5) {
+      return { error: 'Rating must be between 0 and 5.' }
+    }
+  } else {
+    if (!organisation_id && !suggestNewOrg) return { error: 'Target organisation is required.' }
+    if (suggestNewOrg && !newOrgName) return { error: 'Organisation name is required.' }
+    if (!summary) return { error: 'Summary is required.' }
+    if (campaign_type === 'qa' && questions.length === 0) return { error: 'At least one question is required.' }
+    if (campaign_type === 'petition' && !demand_text) return { error: 'The demand is required.' }
+    if (!notification_threshold || notification_threshold < 100) return { error: 'Supporter target must be at least 100.' }
+  }
 
   // If suggesting a new org, create it as pending
+  // (reviews don't support new-org suggestion — org tag is optional)
   let isPendingOrg = false
-  if (suggestNewOrg && newOrgName) {
+  if (campaign_type !== 'review' && suggestNewOrg && newOrgName) {
     const admin = createAdminClient()
     const slug = newOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -70,7 +95,7 @@ export async function createDemand(
   }
 
   // Profanity check (runs first, no API call needed)
-  const textToCheck = [headline, summary, ...questions].join('\n')
+  const textToCheck = [headline, summary, reviewing_subject ?? '', demand_text ?? '', ...questions].join('\n')
   const profanityMatch = checkProfanity(textToCheck, 'campaign')
   if (profanityMatch) {
     return { error: 'Your campaign contains language that doesn\'t meet our community guidelines. Please review and resubmit.' }
@@ -87,6 +112,7 @@ export async function createDemand(
   if (isPendingOrg) moderation_status = 'pending_org'
 
   const admin = createAdminClient()
+  const initialStatus = campaign_type === 'review' ? 'live' : 'building'
   const { data: demand, error: demandError } = await admin
     .from('demands')
     .insert({
@@ -95,12 +121,15 @@ export async function createDemand(
       campaign_type,
       headline,
       summary,
-      status: 'building',
+      status: initialStatus,
       moderation_status,
       moderation_scores: Object.keys(moderation.scores).length > 0 ? moderation.scores : null,
       ...(notification_threshold !== null && { notification_threshold }),
       ...(target_person && { target_person }),
       ...(demand_text && { demand_text }),
+      ...(reviewing_subject && { reviewing_subject }),
+      ...(rating !== null && { rating }),
+      ...(reviewer_display_mode && { reviewer_display_mode }),
     })
     .select('id')
     .single()
@@ -109,18 +138,22 @@ export async function createDemand(
     return { error: 'Failed to create demand. Please try again.' }
   }
 
-  // Auto-support: creator is the first supporter
-  await supabase.from('supports').insert({ demand_id: demand.id, user_id: user.id })
-  await supabase.from('demands').update({ support_count_cache: 1 }).eq('id', demand.id)
+  // Auto-support: creator is the first supporter (skipped for reviews — "I agree"
+  // represents other fans agreeing with the review, not the reviewer themselves)
+  if (campaign_type !== 'review') {
+    await supabase.from('supports').insert({ demand_id: demand.id, user_id: user.id })
+    await supabase.from('demands').update({ support_count_cache: 1 }).eq('id', demand.id)
+  }
 
-  const questionRows = questions.map((body) => ({
-    demand_id: demand.id,
-    author_user_id: user.id,
-    body,
-    is_followup: false,
-  }))
-
-  await supabase.from('demand_questions').insert(questionRows)
+  if (questions.length > 0) {
+    const questionRows = questions.map((body) => ({
+      demand_id: demand.id,
+      author_user_id: user.id,
+      body,
+      is_followup: false,
+    }))
+    await supabase.from('demand_questions').insert(questionRows)
+  }
 
   const linkCount = parseInt((formData.get('link_count') as string) || '0', 10)
   const linkRows: { demand_id: string; url: string; title: string }[] = []

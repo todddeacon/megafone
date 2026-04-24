@@ -47,6 +47,8 @@ export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): 
 }
 
 import SupportButton from './SupportButton'
+import ReviewAgreeButton from './ReviewAgreeButton'
+import ReviewOrgControls from './ReviewOrgControls'
 import ExchangeSection from './ExchangeSection'
 import OfficialResponseForm from './OfficialResponseForm'
 import FollowUpCreatorTools from './FollowUpCreatorTools'
@@ -91,7 +93,10 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   if (demand.moderation_status === 'removed') notFound()
 
   // Per-user queries (not cached — depend on logged-in user)
-  const [supportResult, orgRepResult, currentUserProfileResult] = await Promise.all([
+  const cookieStore = await cookies()
+  const agreeCookieId = cookieStore.get('mf_agree_id')?.value ?? null
+
+  const [supportResult, orgRepResult, currentUserProfileResult, reviewAgreeResult] = await Promise.all([
     user
       ? supabase.from('supports').select('id').eq('demand_id', id).eq('user_id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -106,12 +111,22 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
     user
       ? supabase.from('profiles').select('nickname').eq('id', user.id).maybeSingle()
       : Promise.resolve({ data: null }),
+    demand.campaign_type === 'review' && agreeCookieId
+      ? (await import('@/lib/supabase/admin'))
+          .createAdminClient()
+          .from('review_agrees')
+          .select('id')
+          .eq('demand_id', id)
+          .eq('cookie_id', agreeCookieId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
 
   let isSupporter = !!supportResult.data
   let isCreator = user?.id === demand.creator_user_id
   let isOrgRep = !!orgRepResult.data
   const hasNickname = !!(currentUserProfileResult.data?.nickname)
+  const hasAgreed = !!reviewAgreeResult.data
 
   // Admin "view as" mode — override role flags
   const isAdmin = user?.email === process.env.ADMIN_EMAIL
@@ -163,7 +178,24 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   const targetPerson = demand.target_person ?? null
   const orgTarget = targetPerson ? `${targetPerson} at ${orgName}` : orgName
   const isPetition = demand.campaign_type === 'petition'
+  const isReview = demand.campaign_type === 'review'
+  const hasOrg = !!demand.organisation
   const orgInitials = orgName.split(' ').slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('')
+
+  // Reviewer display name for reviews
+  let reviewerDisplayName: string | null = null
+  if (isReview) {
+    const mode = demand.reviewer_display_mode as 'real_name' | 'nickname' | 'anonymous' | null
+    if (mode === 'anonymous') {
+      reviewerDisplayName = 'Anonymous'
+    } else if (mode === 'nickname') {
+      const admin = (await import('@/lib/supabase/admin')).createAdminClient()
+      const { data: prof } = await admin.from('profiles').select('nickname, name').eq('id', demand.creator_user_id).maybeSingle()
+      reviewerDisplayName = prof?.nickname ?? prof?.name ?? 'Fan'
+    } else {
+      reviewerDisplayName = creatorName ?? 'Fan'
+    }
+  }
   const createdDate = new Date(demand.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
   })
@@ -199,27 +231,31 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
             {/* Campaign identity */}
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                {demand.organisation?.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={demand.organisation.logo_url} alt={orgName} className="w-8 h-8 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-[#064E3B]/10 border border-[#064E3B]/20 flex items-center justify-center text-xs font-bold text-[#064E3B] shrink-0">
-                    {orgInitials}
-                  </div>
-                )}
-                <a
-                  href={`/organisations/${demand.organisation?.slug}`}
-                  className="text-sm font-semibold text-gray-900 hover:underline transition-colors"
-                >
-                  {orgName}
-                </a>
-                <span className="text-gray-200 text-xs">·</span>
+                {hasOrg ? (
+                  <>
+                    {demand.organisation?.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={demand.organisation.logo_url} alt={orgName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[#064E3B]/10 border border-[#064E3B]/20 flex items-center justify-center text-xs font-bold text-[#064E3B] shrink-0">
+                        {orgInitials}
+                      </div>
+                    )}
+                    <a
+                      href={`/organisations/${demand.organisation?.slug}`}
+                      className="text-sm font-semibold text-gray-900 hover:underline transition-colors"
+                    >
+                      {orgName}
+                    </a>
+                    <span className="text-gray-200 text-xs">·</span>
+                  </>
+                ) : null}
                 <span className="text-xs text-gray-400">{createdDate}</span>
                 {isCreator && (
                   <>
                     <span className="text-gray-200 text-xs">·</span>
                     <a
-                      href={`/demands/${id}/edit`}
+                      href={isReview ? `/demands/${id}/edit-review` : `/demands/${id}/edit`}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,33 +265,74 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                     </a>
                   </>
                 )}
+                {isReview && demand.updated_at && (
+                  <>
+                    <span className="text-gray-200 text-xs">·</span>
+                    <span
+                      className="text-xs text-gray-400 italic"
+                      title={`Edited ${new Date(demand.updated_at).toLocaleString('en-GB')}`}
+                    >
+                      edited
+                    </span>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-2 mb-3">
                 <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                  isPetition
+                  isReview
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isPetition
                     ? 'bg-amber-50 text-amber-700 border border-amber-200'
                     : 'bg-blue-50 text-blue-700 border border-blue-200'
                 }`}>
-                  {isPetition ? 'Demand Change' : 'Ask Questions'}
+                  {isReview ? 'Review' : isPetition ? 'Petition' : 'Q&A'}
                 </span>
               </div>
 
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold mb-3 ${statusClassName}`}>
-                {statusDot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
-                {statusLabel}
-              </span>
+              {!isReview && (
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold mb-3 ${statusClassName}`}>
+                  {statusDot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                  {statusLabel}
+                </span>
+              )}
 
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#064E3B] leading-tight">
                 {demand.headline}
               </h1>
 
-              {creatorName && (
+              {isReview && demand.reviewing_subject && (
+                <p className="mt-3 text-base font-medium text-gray-700">{demand.reviewing_subject}</p>
+              )}
+
+              {isReview && demand.rating !== null && demand.rating !== undefined && (
+                <div className="mt-4 flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <svg
+                      key={n}
+                      className={`w-6 h-6 ${n <= demand.rating ? 'text-[#F59E0B]' : 'text-gray-200'}`}
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.366 2.446c-.784.57-1.84-.197-1.539-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.652 9.154c-.784-.57-.381-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.957z" />
+                    </svg>
+                  ))}
+                  <span className="ml-2 text-sm font-bold text-gray-700 tabular-nums">{demand.rating} / 5</span>
+                </div>
+              )}
+
+              {isReview && reviewerDisplayName && (
+                <p className="mt-3 text-sm text-gray-400">
+                  Review by <span className="text-gray-600 font-medium">{reviewerDisplayName}</span>
+                </p>
+              )}
+
+              {!isReview && creatorName && (
                 <p className="mt-2 text-sm text-gray-400">
                   Campaign by <span className="text-gray-600 font-medium">{creatorName}</span>
                 </p>
               )}
-              {targetPerson && (
+              {!isReview && targetPerson && (
                 <p className="mt-1 text-sm text-gray-400">
                   Directed at <span className="text-gray-600 font-medium">{targetPerson}</span>
                 </p>
@@ -323,8 +400,38 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
               </div>
             )}
 
+            {/* Review: public org responses + org controls */}
+            {isReview && officialResponses.length > 0 && (
+              <div className="rounded-2xl overflow-hidden border border-emerald-200 bg-white">
+                <div className="px-6 py-3 bg-emerald-50 border-b border-emerald-100">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-emerald-700">
+                    Response from {orgName}
+                  </h2>
+                </div>
+                <div className="px-6 py-5 space-y-4">
+                  {officialResponses.map((r) => (
+                    <div key={r.id}>
+                      <p className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{r.body}</p>
+                      <p className="mt-2 text-xs text-gray-400">
+                        {new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isReview && isOrgRep && (
+              <ReviewOrgControls
+                demandId={id}
+                orgName={orgName}
+                isResolved={!!demand.resolved_by_org}
+                hasReply={officialResponses.length > 0}
+              />
+            )}
+
             {/* Questions + responses exchange (Q&A only) */}
-            {!isPetition && (allQuestions.length > 0 || isOrgRep) && (
+            {!isPetition && !isReview && (allQuestions.length > 0 || isOrgRep) && (
               <ExchangeSection
                 demandId={id}
                 questions={allQuestions}
@@ -338,18 +445,27 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
 
             {/* Mobile-only support panel — shown after questions */}
             <div className="lg:hidden">
-              <SupportButton
-                demandId={id}
-                isAuthenticated={!!user}
-                isEmailVerified={!!user?.email_confirmed_at}
-                isSupported={isSupporter}
-                supportCount={demand.support_count_cache}
-                questionCount={allQuestions.length}
-                notificationThreshold={demand.notification_threshold ?? null}
-                headline={demand.headline}
-                orgName={orgTarget}
-
-              />
+              {isReview ? (
+                <ReviewAgreeButton
+                  demandId={id}
+                  supportCount={demand.support_count_cache ?? 0}
+                  hasAgreed={hasAgreed}
+                  rating={demand.rating ?? null}
+                  reviewingSubject={demand.reviewing_subject ?? null}
+                />
+              ) : (
+                <SupportButton
+                  demandId={id}
+                  isAuthenticated={!!user}
+                  isEmailVerified={!!user?.email_confirmed_at}
+                  isSupported={isSupporter}
+                  supportCount={demand.support_count_cache}
+                  questionCount={allQuestions.length}
+                  notificationThreshold={demand.notification_threshold ?? null}
+                  headline={demand.headline}
+                  orgName={orgTarget}
+                />
+              )}
             </div>
 
             {/* Creator: add follow-up questions + notify org (Q&A only) */}
@@ -410,31 +526,43 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
 
             {/* Support panel — hidden on mobile (shown inline after questions instead) */}
             <div className="hidden lg:block">
-            <SupportButton
-              demandId={id}
-              isAuthenticated={!!user}
-              isEmailVerified={!!user?.email_confirmed_at}
-              isSupported={isSupporter}
-              supportCount={demand.support_count_cache}
-              questionCount={allQuestions.length}
-              notificationThreshold={demand.notification_threshold ?? null}
-              headline={demand.headline}
-              orgName={orgTarget}
-            />
+              {isReview ? (
+                <ReviewAgreeButton
+                  demandId={id}
+                  supportCount={demand.support_count_cache ?? 0}
+                  hasAgreed={hasAgreed}
+                  rating={demand.rating ?? null}
+                  reviewingSubject={demand.reviewing_subject ?? null}
+                />
+              ) : (
+                <SupportButton
+                  demandId={id}
+                  isAuthenticated={!!user}
+                  isEmailVerified={!!user?.email_confirmed_at}
+                  isSupported={isSupporter}
+                  supportCount={demand.support_count_cache}
+                  questionCount={allQuestions.length}
+                  notificationThreshold={demand.notification_threshold ?? null}
+                  headline={demand.headline}
+                  orgName={orgTarget}
+                />
+              )}
             </div>
 
-            {/* Campaign progress */}
-            <CampaignStatus
-              status={demand.status}
-              createdAt={demand.created_at}
-              notifiedAt={notifiedAt}
-              respondedAt={officialResponses[0]?.created_at ?? null}
-              orgName={orgName}
-              isPetition={isPetition}
-            />
+            {/* Campaign progress (not shown for reviews — different lifecycle) */}
+            {!isReview && (
+              <CampaignStatus
+                status={demand.status}
+                createdAt={demand.created_at}
+                notifiedAt={notifiedAt}
+                respondedAt={officialResponses[0]?.created_at ?? null}
+                orgName={orgName}
+                isPetition={isPetition}
+              />
+            )}
 
             {/* Creator: mark outcome */}
-            {isCreator && demand.status === 'responded' && (
+            {!isReview && isCreator && demand.status === 'responded' && (
               <CreatorResolution demandId={id} isPetition={isPetition} />
             )}
 
