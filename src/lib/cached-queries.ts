@@ -71,6 +71,7 @@ export function getCachedDemand(id: string) {
         updatesResult,
         linksResult,
         notificationsResult,
+        reviewMediaResult,
       ] = await Promise.all([
         supabase
           .from('comments')
@@ -93,6 +94,11 @@ export function getCachedDemand(id: string) {
           .select('id, sent_at')
           .eq('demand_id', id)
           .order('sent_at', { ascending: true }),
+        supabase
+          .from('review_media')
+          .select('id, kind, url, display_order')
+          .eq('demand_id', id)
+          .order('display_order', { ascending: true }),
       ])
 
       const rawComments = commentsResult.data ?? []
@@ -120,6 +126,7 @@ export function getCachedDemand(id: string) {
         updates: updatesResult.data ?? [],
         videoLinks: linksResult.data ?? [],
         notifications: notificationsResult.data ?? [],
+        reviewMedia: reviewMediaResult.data ?? [],
         creatorName: creatorProfileResult.data?.name ?? null,
       }
     },

@@ -9,11 +9,18 @@ export default async function EditReviewPage({ params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: demand } = await supabase
-    .from('demands')
-    .select('id, campaign_type, headline, summary, reviewing_subject, rating, reviewer_display_mode, organisation_id, creator_user_id')
-    .eq('id', id)
-    .single()
+  const [{ data: demand }, { data: media }] = await Promise.all([
+    supabase
+      .from('demands')
+      .select('id, campaign_type, headline, summary, reviewing_subject, rating, reviewer_display_mode, organisation_id, creator_user_id')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('review_media')
+      .select('id, kind, url, display_order')
+      .eq('demand_id', id)
+      .order('display_order', { ascending: true }),
+  ])
 
   if (!demand) notFound()
   if (demand.campaign_type !== 'review') redirect(`/demands/${id}/edit`)
@@ -38,6 +45,11 @@ export default async function EditReviewPage({ params }: { params: Promise<{ id:
               summary: demand.summary ?? '',
               rating: demand.rating ?? null,
               reviewer_display_mode: (demand.reviewer_display_mode as 'real_name' | 'nickname' | 'anonymous') ?? 'real_name',
+              existingMedia: (media ?? []).map((m) => ({
+                id: m.id,
+                kind: m.kind as 'image' | 'video',
+                url: m.url,
+              })),
             }}
           />
         </div>

@@ -345,6 +345,75 @@ export default function NewDemandForm({
   const [reviewingSubject, setReviewingSubject] = useState('')
   const [rating, setRating] = useState<number | null>(null)
   const [reviewerDisplayMode, setReviewerDisplayMode] = useState<'real_name' | 'nickname' | 'anonymous'>('real_name')
+  const [reviewImages, setReviewImages] = useState<File[]>([])
+  const [reviewVideo, setReviewVideo] = useState<File | null>(null)
+  const [reviewImagePreviews, setReviewImagePreviews] = useState<string[]>([])
+  const [reviewVideoPreview, setReviewVideoPreview] = useState<string | null>(null)
+  const imagePickerRef = useRef<HTMLInputElement>(null)
+  const videoPickerRef = useRef<HTMLInputElement>(null)
+
+  const MAX_IMAGES = 5
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+  const MAX_VIDEO_SIZE = 100 * 1024 * 1024
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm']
+
+  useEffect(() => {
+    const urls = reviewImages.map((f) => URL.createObjectURL(f))
+    setReviewImagePreviews(urls)
+    return () => urls.forEach((u) => URL.revokeObjectURL(u))
+  }, [reviewImages])
+
+  useEffect(() => {
+    if (!reviewVideo) {
+      setReviewVideoPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(reviewVideo)
+    setReviewVideoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [reviewVideo])
+
+  function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    const accepted: File[] = []
+    for (const f of picked) {
+      if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
+        setValidationError('Images must be JPG, PNG, or WEBP.')
+        continue
+      }
+      if (f.size > MAX_IMAGE_SIZE) {
+        setValidationError(`"${f.name}" is larger than 5 MB.`)
+        continue
+      }
+      accepted.push(f)
+    }
+    setReviewImages((prev) => [...prev, ...accepted].slice(0, MAX_IMAGES))
+  }
+
+  function handleVideoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    if (!ALLOWED_VIDEO_TYPES.includes(f.type)) {
+      setValidationError('Video must be MP4, MOV, or WEBM.')
+      return
+    }
+    if (f.size > MAX_VIDEO_SIZE) {
+      setValidationError('Video is larger than 100 MB.')
+      return
+    }
+    setReviewVideo(f)
+  }
+
+  function removeImage(i: number) {
+    setReviewImages((prev) => prev.filter((_, j) => j !== i))
+  }
+
+  function removeVideo() {
+    setReviewVideo(null)
+  }
 
   const [showPreview, setShowPreview] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -374,6 +443,16 @@ export default function NewDemandForm({
   }
 
   function handlePublish() {
+    if (campaignType === 'review' && formRef.current) {
+      // Reviews support file uploads held in local state; we construct FormData
+      // ourselves so we can attach the selected images and video.
+      const fd = new FormData(formRef.current)
+      reviewImages.forEach((f, i) => fd.append(`review_image_${i}`, f))
+      fd.append('review_image_count', String(reviewImages.length))
+      if (reviewVideo) fd.append('review_video', reviewVideo)
+      formAction(fd)
+      return
+    }
     formRef.current?.requestSubmit()
   }
 
@@ -757,54 +836,150 @@ export default function NewDemandForm({
           </div>
         )}
 
-        {/* Links */}
-        <div>
-          <label className={labelClass}>
-            Add Content <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <div className="space-y-3">
-            {links.map((link, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <div className="flex-1 grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={link.title}
-                    onChange={(e) => updateLink(i, 'title', e.target.value)}
-                    placeholder="Title"
-                    className={inputClass}
-                  />
-                  <input
-                    type="url"
-                    value={link.url}
-                    onChange={(e) => updateLink(i, 'url', e.target.value)}
-                    placeholder="https://…"
-                    className={inputClass}
-                  />
+        {/* Links — not shown for reviews (reviews use photo/video uploads instead) */}
+        {campaignType !== 'review' && (
+          <div>
+            <label className={labelClass}>
+              Add Content <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="space-y-3">
+              {links.map((link, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={link.title}
+                      onChange={(e) => updateLink(i, 'title', e.target.value)}
+                      placeholder="Title"
+                      className={inputClass}
+                    />
+                    <input
+                      type="url"
+                      value={link.url}
+                      onChange={(e) => updateLink(i, 'url', e.target.value)}
+                      placeholder="https://…"
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeLink(i)}
+                    className="mt-2 text-gray-300 hover:text-red-400 transition-colors text-sm"
+                    aria-label="Remove link"
+                  >✕</button>
                 </div>
+              ))}
+            </div>
+            <input type="hidden" name="link_count" value={links.length} />
+            {links.map((link, i) => (
+              <span key={i}>
+                <input type="hidden" name={`link_url_${i}`} value={link.url} />
+                <input type="hidden" name={`link_title_${i}`} value={link.title} />
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={addLink}
+              className="mt-3 text-sm font-medium text-[#064E3B] hover:text-[#065F46] underline underline-offset-2 transition-colors"
+            >
+              + Add a link
+            </button>
+          </div>
+        )}
+
+        {/* Photos (review only) */}
+        {campaignType === 'review' && (
+          <div>
+            <label className={labelClass}>
+              Photos <span className="text-gray-400 font-normal">(optional, up to {MAX_IMAGES})</span>
+            </label>
+            <input
+              ref={imagePickerRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={handleImagePick}
+              className="hidden"
+            />
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {reviewImagePreviews.map((src, i) => (
+                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white flex items-center justify-center text-xs font-bold hover:bg-black transition-colors"
+                    aria-label="Remove photo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {reviewImages.length < MAX_IMAGES && (
                 <button
                   type="button"
-                  onClick={() => removeLink(i)}
-                  className="mt-2 text-gray-300 hover:text-red-400 transition-colors text-sm"
-                  aria-label="Remove link"
-                >✕</button>
-              </div>
-            ))}
+                  onClick={() => imagePickerRef.current?.click()}
+                  className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-[#064E3B] hover:text-[#064E3B] transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-xs font-semibold mt-1">Add photo</span>
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              JPG, PNG, or WEBP · max 5 MB each · {reviewImages.length} / {MAX_IMAGES} selected
+            </p>
           </div>
-          <input type="hidden" name="link_count" value={links.length} />
-          {links.map((link, i) => (
-            <span key={i}>
-              <input type="hidden" name={`link_url_${i}`} value={link.url} />
-              <input type="hidden" name={`link_title_${i}`} value={link.title} />
-            </span>
-          ))}
-          <button
-            type="button"
-            onClick={addLink}
-            className="mt-3 text-sm font-medium text-[#064E3B] hover:text-[#065F46] underline underline-offset-2 transition-colors"
-          >
-            + Add a link
-          </button>
-        </div>
+        )}
+
+        {/* Video (review only) */}
+        {campaignType === 'review' && (
+          <div>
+            <label className={labelClass}>
+              Video <span className="text-gray-400 font-normal">(optional, max 1)</span>
+            </label>
+            <input
+              ref={videoPickerRef}
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm"
+              onChange={handleVideoPick}
+              className="hidden"
+            />
+            {reviewVideo && reviewVideoPreview ? (
+              <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-black">
+                <video src={reviewVideoPreview} controls className="w-full max-h-64" />
+                <button
+                  type="button"
+                  onClick={removeVideo}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center text-xs font-bold hover:bg-black transition-colors"
+                  aria-label="Remove video"
+                >
+                  ✕
+                </button>
+                <p className="absolute bottom-2 left-2 text-xs text-white bg-black/60 rounded px-2 py-1">
+                  {reviewVideo.name} · {(reviewVideo.size / 1024 / 1024).toFixed(1)} MB
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => videoPickerRef.current?.click()}
+                className="w-full rounded-lg border-2 border-dashed border-gray-300 py-8 flex flex-col items-center justify-center text-gray-400 hover:border-[#064E3B] hover:text-[#064E3B] transition-colors"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-semibold mt-2">Add video</span>
+              </button>
+            )}
+            <p className="mt-1 text-xs text-gray-400">
+              MP4, MOV, or WEBM · max 100 MB
+            </p>
+          </div>
+        )}
 
         {/* Errors */}
         {(validationError || state.error) && (

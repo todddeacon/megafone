@@ -70,6 +70,89 @@ export async function updateReview(
 
   if (updateError) return { error: 'Failed to save changes. Please try again.' }
 
+  // Media sync — delete any existing media not in keptIds + keep/drop existing video + upload new files
+  const keptIdsRaw = (formData.get('kept_media_ids') as string) ?? ''
+  const keptIds = new Set(keptIdsRaw.split(',').map((s) => s.trim()).filter(Boolean))
+  const keepExistingVideo = formData.get('keep_existing_video') === 'true'
+
+  const { data: existingMedia } = await admin
+    .from('review_media')
+    .select('id, kind, storage_path')
+    .eq('demand_id', demandId)
+
+  const toDelete = (existingMedia ?? []).filter((m) => {
+    if (m.kind === 'image') return !keptIds.has(m.id)
+    if (m.kind === 'video') return !keepExistingVideo
+    return false
+  })
+
+  if (toDelete.length > 0) {
+    const paths = toDelete.map((m) => m.storage_path).filter((p): p is string => !!p)
+    if (paths.length > 0) {
+      await admin.storage.from('review-media').remove(paths)
+    }
+    await admin.from('review_media').delete().in('id', toDelete.map((m) => m.id))
+  }
+
+  // Upload new images
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+  const MAX_VIDEO_SIZE = 100 * 1024 * 1024
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm']
+
+  const newImageCount = parseInt((formData.get('new_image_count') as string) || '0', 10) || 0
+  const newMediaRows: { demand_id: string; kind: 'image' | 'video'; url: string; storage_path: string; display_order: number }[] = []
+
+  for (let i = 0; i < newImageCount; i++) {
+    const file = formData.get(`new_image_${i}`) as File | null
+    if (!file || file.size === 0) continue
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) continue
+    if (file.size > MAX_IMAGE_SIZE) continue
+
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+    const path = `${demandId}/${Date.now()}-${i}.${ext}`
+
+    const { error: uploadError } = await admin.storage
+      .from('review-media')
+      .upload(path, file, { contentType: file.type })
+
+    if (!uploadError) {
+      const { data: { publicUrl } } = admin.storage.from('review-media').getPublicUrl(path)
+      newMediaRows.push({
+        demand_id: demandId,
+        kind: 'image',
+        url: publicUrl,
+        storage_path: path,
+        display_order: Date.now() + i,
+      })
+    }
+  }
+
+  const newVideoFile = formData.get('new_video') as File | null
+  if (newVideoFile && newVideoFile.size > 0 && ALLOWED_VIDEO_TYPES.includes(newVideoFile.type) && newVideoFile.size <= MAX_VIDEO_SIZE) {
+    const ext = newVideoFile.type === 'video/webm' ? 'webm' : newVideoFile.type === 'video/quicktime' ? 'mov' : 'mp4'
+    const path = `${demandId}/video-${Date.now()}.${ext}`
+
+    const { error: uploadError } = await admin.storage
+      .from('review-media')
+      .upload(path, newVideoFile, { contentType: newVideoFile.type })
+
+    if (!uploadError) {
+      const { data: { publicUrl } } = admin.storage.from('review-media').getPublicUrl(path)
+      newMediaRows.push({
+        demand_id: demandId,
+        kind: 'video',
+        url: publicUrl,
+        storage_path: path,
+        display_order: 99,
+      })
+    }
+  }
+
+  if (newMediaRows.length > 0) {
+    await admin.from('review_media').insert(newMediaRows)
+  }
+
   revalidatePath(`/demands/${demandId}`)
   revalidateTag(`demand-${demandId}`, { expire: 0 })
   revalidateTag('demands-list', { expire: 0 })

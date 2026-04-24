@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): 
 import SupportButton from './SupportButton'
 import ReviewAgreeButton from './ReviewAgreeButton'
 import ReviewOrgControls from './ReviewOrgControls'
+import ReviewMediaGallery from './ReviewMediaGallery'
 import ExchangeSection from './ExchangeSection'
 import OfficialResponseForm from './OfficialResponseForm'
 import FollowUpCreatorTools from './FollowUpCreatorTools'
@@ -86,7 +87,7 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
 
   if (!cachedData) notFound()
 
-  const { demand, comments, updates, videoLinks, notifications, creatorName } = cachedData
+  const { demand, comments, updates, videoLinks, notifications, reviewMedia, creatorName } = cachedData
 
   // Hide pending_review campaigns from everyone except the creator
   if (demand.moderation_status === 'pending_review' && user?.id !== demand.creator_user_id) notFound()
@@ -338,6 +339,17 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
                 </p>
               )}
             </div>
+
+            {/* Review media gallery — images + video above the body text */}
+            {isReview && reviewMedia && (reviewMedia as { id: string; kind: string; url: string }[]).length > 0 && (
+              <ReviewMediaGallery
+                media={(reviewMedia as { id: string; kind: 'image' | 'video'; url: string }[]).map((m) => ({
+                  id: m.id,
+                  kind: m.kind,
+                  url: m.url,
+                }))}
+              />
+            )}
 
             {/* Demand section (petition) — directly after headline/directed at */}
             {isPetition && demand.demand_text && (

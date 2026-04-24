@@ -155,17 +155,93 @@ export async function createDemand(
     await supabase.from('demand_questions').insert(questionRows)
   }
 
-  const linkCount = parseInt((formData.get('link_count') as string) || '0', 10)
-  const linkRows: { demand_id: string; url: string; title: string }[] = []
+  if (campaign_type !== 'review') {
+    const linkCount = parseInt((formData.get('link_count') as string) || '0', 10)
+    const linkRows: { demand_id: string; url: string; title: string }[] = []
 
-  for (let i = 0; i < linkCount; i++) {
-    const url = (formData.get(`link_url_${i}`) as string)?.trim()
-    const title = (formData.get(`link_title_${i}`) as string)?.trim()
-    if (url && title) linkRows.push({ demand_id: demand.id, url, title })
+    for (let i = 0; i < linkCount; i++) {
+      const url = (formData.get(`link_url_${i}`) as string)?.trim()
+      const title = (formData.get(`link_title_${i}`) as string)?.trim()
+      if (url && title) linkRows.push({ demand_id: demand.id, url, title })
+    }
+
+    if (linkRows.length > 0) {
+      await supabase.from('demand_links').insert(linkRows)
+    }
   }
 
-  if (linkRows.length > 0) {
-    await supabase.from('demand_links').insert(linkRows)
+  // Review media uploads: up to 5 images + 1 video
+  if (campaign_type === 'review') {
+    const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+    const MAX_VIDEO_SIZE = 100 * 1024 * 1024
+    const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+    const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm']
+
+    const imageCount = Math.min(5, parseInt((formData.get('review_image_count') as string) || '0', 10) || 0)
+    const mediaRows: { demand_id: string; kind: 'image' | 'video'; url: string; storage_path: string; display_order: number }[] = []
+
+    for (let i = 0; i < imageCount; i++) {
+      const file = formData.get(`review_image_${i}`) as File | null
+      if (!file || file.size === 0) continue
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) continue
+      if (file.size > MAX_IMAGE_SIZE) continue
+
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+      const path = `${demand.id}/${Date.now()}-${i}.${ext}`
+
+      const { error: uploadError } = await admin.storage
+        .from('review-media')
+        .upload(path, file, { contentType: file.type })
+
+      if (uploadError) {
+        console.error('[createDemand] Image upload failed:', uploadError.message)
+        continue
+      }
+
+      const { data: { publicUrl } } = admin.storage
+        .from('review-media')
+        .getPublicUrl(path)
+
+      mediaRows.push({
+        demand_id: demand.id,
+        kind: 'image',
+        url: publicUrl,
+        storage_path: path,
+        display_order: i,
+      })
+    }
+
+    const videoFile = formData.get('review_video') as File | null
+    if (videoFile && videoFile.size > 0) {
+      if (ALLOWED_VIDEO_TYPES.includes(videoFile.type) && videoFile.size <= MAX_VIDEO_SIZE) {
+        const ext = videoFile.type === 'video/webm' ? 'webm' : videoFile.type === 'video/quicktime' ? 'mov' : 'mp4'
+        const path = `${demand.id}/video-${Date.now()}.${ext}`
+
+        const { error: uploadError } = await admin.storage
+          .from('review-media')
+          .upload(path, videoFile, { contentType: videoFile.type })
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = admin.storage
+            .from('review-media')
+            .getPublicUrl(path)
+
+          mediaRows.push({
+            demand_id: demand.id,
+            kind: 'video',
+            url: publicUrl,
+            storage_path: path,
+            display_order: 99,
+          })
+        } else {
+          console.error('[createDemand] Video upload failed:', uploadError.message)
+        }
+      }
+    }
+
+    if (mediaRows.length > 0) {
+      await admin.from('review_media').insert(mediaRows)
+    }
   }
 
   // Send emails for pending org suggestions
