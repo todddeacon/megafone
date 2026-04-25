@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import OrgProfileForm from './OrgProfileForm'
 import TeamSection from './TeamSection'
 import OrgAvatar from '@/components/OrgAvatar'
@@ -139,7 +140,9 @@ export default async function DashboardPage() {
 
         {organisations.map((org) => {
           const orgCampaigns = campaigns.filter((d) => d.organisation_id === org.id)
-          const orgReviews = orgCampaigns.filter((d) => d.campaign_type === 'review')
+          const orgReviews = REVIEWS_ENABLED
+            ? orgCampaigns.filter((d) => d.campaign_type === 'review')
+            : []
           const orgNonReviews = orgCampaigns.filter((d) => d.campaign_type !== 'review')
           const awaitingResponse = orgNonReviews.filter((d) => d.status === 'notified' || d.status === 'further_questions')
           const unresolvedReviews = orgReviews.filter((d) => !d.resolved_by_org)
@@ -164,7 +167,7 @@ export default async function DashboardPage() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <div className={`grid grid-cols-2 ${REVIEWS_ENABLED ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3 mb-6`}>
                 <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                   <p className="text-2xl font-black text-[#064E3B]">{orgNonReviews.length}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Campaigns</p>
@@ -175,15 +178,17 @@ export default async function DashboardPage() {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">Awaiting response</p>
                 </div>
-                <div className={`rounded-xl border px-5 py-4 ${unresolvedReviews.length > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
-                  <p className={`text-2xl font-black ${unresolvedReviews.length > 0 ? 'text-emerald-700' : 'text-[#064E3B]'}`}>
-                    {unresolvedReviews.length}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    New reviews
-                    {avgRating !== null && ` · ${avgRating.toFixed(1)}★ avg`}
-                  </p>
-                </div>
+                {REVIEWS_ENABLED && (
+                  <div className={`rounded-xl border px-5 py-4 ${unresolvedReviews.length > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
+                    <p className={`text-2xl font-black ${unresolvedReviews.length > 0 ? 'text-emerald-700' : 'text-[#064E3B]'}`}>
+                      {unresolvedReviews.length}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      New reviews
+                      {avgRating !== null && ` · ${avgRating.toFixed(1)}★ avg`}
+                    </p>
+                  </div>
+                )}
                 <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                   <p className="text-2xl font-black text-[#064E3B]">{totalSupporters.toLocaleString()}</p>
                   <p className="text-xs text-gray-400 mt-0.5">Total engagement</p>

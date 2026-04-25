@@ -8,6 +8,7 @@ import { sendThresholdEmail, sendResponseEmail, sendFollowUpEmail, sendWelcomeSu
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { createAdminClient, getEmailsForUserIds } from '@/lib/supabase/admin'
 import { canActAsCreator, canActAsOrgRep } from '@/lib/admin-mode'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 
 export type ActionState = { error: string | null }
 
@@ -29,6 +30,8 @@ async function getClientIp(): Promise<string | null> {
 }
 
 export async function toggleReviewResolved(demandId: string): Promise<ActionState> {
+  if (!REVIEWS_ENABLED) return { error: 'Reviews are not currently available.' }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
@@ -79,6 +82,8 @@ export async function postReviewReply(
   prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  if (!REVIEWS_ENABLED) return { error: 'Reviews are not currently available.' }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }
@@ -135,6 +140,8 @@ export async function postReviewReply(
 }
 
 export async function agreeWithReview(demandId: string): Promise<ActionState> {
+  if (!REVIEWS_ENABLED) return { error: 'Reviews are not currently available.' }
+
   // Ensure target exists and is a review
   const admin = createAdminClient()
   const { data: demand } = await admin

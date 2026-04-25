@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useRef, useEffect } from 'react'
 import { createDemand } from './actions'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import type { Organisation } from '@/types'
 
 // ── Search + Select ────────────────────────────────────────────────────────
@@ -330,8 +331,9 @@ export default function NewDemandForm({
   const [state, formAction, isPending] = useActionState(createDemand, { error: null })
   const formRef = useRef<HTMLFormElement>(null)
 
-  // Controlled field state — needed to populate the preview
-  const [campaignType, setCampaignType] = useState<'review' | 'qa' | 'petition'>('review')
+  // Controlled field state — needed to populate the preview.
+  // When the reviews feature is off, the default tab is 'qa' (Review tab is hidden entirely).
+  const [campaignType, setCampaignType] = useState<'review' | 'qa' | 'petition'>(REVIEWS_ENABLED ? 'review' : 'qa')
   const [headline, setHeadline] = useState('')
   const [organisationId, setOrganisationId] = useState('')
   const [suggestNewOrg, setSuggestNewOrg] = useState(false)
@@ -476,15 +478,17 @@ export default function NewDemandForm({
           <label className={labelClass}>Campaign type</label>
           <input type="hidden" name="campaign_type" value={campaignType} />
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-semibold">
-            <button
-              type="button"
-              onClick={() => setCampaignType('review')}
-              className={`flex-1 px-4 py-2.5 transition-colors ${
-                campaignType === 'review' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              Review
-            </button>
+            {REVIEWS_ENABLED && (
+              <button
+                type="button"
+                onClick={() => setCampaignType('review')}
+                className={`flex-1 px-4 py-2.5 transition-colors ${
+                  campaignType === 'review' ? 'bg-[#064E3B] text-white' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                Review
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setCampaignType('qa')}

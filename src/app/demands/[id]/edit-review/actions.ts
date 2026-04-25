@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 
 export type UpdateReviewState = { error: string | null }
 
@@ -13,6 +14,8 @@ export async function updateReview(
   _prev: UpdateReviewState,
   formData: FormData
 ): Promise<UpdateReviewState> {
+  if (!REVIEWS_ENABLED) return { error: 'Reviews are not currently available.' }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'You must be signed in.' }

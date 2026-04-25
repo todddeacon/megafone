@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkModeration, checkProfanity } from '@/lib/moderation'
 import { sendOrgSuggestionPendingEmail, sendOrgSuggestionAdminEmail } from '@/lib/email'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 
 export type CreateDemandState = { error: string | null }
 
@@ -25,6 +26,10 @@ export async function createDemand(
   const rawCampaignType = formData.get('campaign_type') as string
   const campaign_type: 'review' | 'qa' | 'petition' =
     rawCampaignType === 'review' ? 'review' : rawCampaignType === 'petition' ? 'petition' : 'qa'
+
+  if (campaign_type === 'review' && !REVIEWS_ENABLED) {
+    return { error: 'Reviews are not currently available.' }
+  }
 
   const headline = (formData.get('headline') as string)?.trim()
   let organisation_id = (formData.get('organisation_id') as string) || null

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getCachedDemand } from '@/lib/cached-queries'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import ExpandableText from '@/components/ExpandableText'
 
 export async function generateMetadata({ params }: PageProps<'/demands/[id]'>): Promise<Metadata> {
@@ -92,6 +93,9 @@ export default async function DemandPage({ params }: PageProps<'/demands/[id]'>)
   // Hide pending_review campaigns from everyone except the creator
   if (demand.moderation_status === 'pending_review' && user?.id !== demand.creator_user_id) notFound()
   if (demand.moderation_status === 'removed') notFound()
+
+  // Hide review campaigns entirely when the feature is disabled
+  if (demand.campaign_type === 'review' && !REVIEWS_ENABLED) notFound()
 
   // Per-user queries (not cached — depend on logged-in user)
   const cookieStore = await cookies()

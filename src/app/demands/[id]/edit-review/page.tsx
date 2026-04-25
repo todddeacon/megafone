@@ -1,9 +1,12 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import EditReviewForm from './EditReviewForm'
 
 export default async function EditReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  if (!REVIEWS_ENABLED) redirect(`/demands/${id}`)
+
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

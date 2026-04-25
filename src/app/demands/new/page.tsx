@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import NewDemandForm from './NewDemandForm'
 import GoalNet from '@/components/GoalNet'
 
@@ -35,7 +36,9 @@ export default async function NewDemandPage() {
         <div className="mx-auto max-w-2xl relative z-10">
           <h1 className="text-3xl font-black tracking-tight text-white">Create a Campaign</h1>
           <p className="mt-2 text-sm text-emerald-200">
-            Share a review, ask questions, or demand change.
+            {REVIEWS_ENABLED
+              ? 'Share a review, ask questions, or demand change.'
+              : 'Ask the questions that matter, or demand the change you want.'}
           </p>
         </div>
       </div>

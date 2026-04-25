@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 import OrgAvatar from '@/components/OrgAvatar'
 
 export async function generateMetadata({ params }: PageProps<'/organisations/[slug]'>): Promise<Metadata> {
@@ -75,14 +76,21 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
     .eq('moderation_status', 'approved')
     .order('support_count_cache', { ascending: false })
 
-  const total     = demands?.length ?? 0
-  const active    = demands?.filter((d) => ACTIVE_STATUSES.has(d.status)).length ?? 0
-  const responded = demands?.filter((d) => ['responded', 'resolved'].includes(d.status)).length ?? 0
+  // Hide review-type campaigns from the public org page when the feature is off
+  const visibleDemands = REVIEWS_ENABLED
+    ? (demands ?? [])
+    : (demands ?? []).filter((d) => d.campaign_type !== 'review')
+
+  const total     = visibleDemands.length
+  const active    = visibleDemands.filter((d) => ACTIVE_STATUSES.has(d.status)).length
+  const responded = visibleDemands.filter((d) => ['responded', 'resolved'].includes(d.status)).length
   const initials  = orgInitials(org.name)
 
-  // Review aggregate — only shown if 10+ reviews
-  const reviews = (demands ?? []).filter((d) => d.campaign_type === 'review' && d.rating !== null && d.rating !== undefined)
-  const showAvgRating = reviews.length >= 10
+  // Review aggregate — only shown if feature is enabled and 10+ reviews exist
+  const reviews = REVIEWS_ENABLED
+    ? (demands ?? []).filter((d) => d.campaign_type === 'review' && d.rating !== null && d.rating !== undefined)
+    : []
+  const showAvgRating = REVIEWS_ENABLED && reviews.length >= 10
   const avgRating = showAvgRating
     ? reviews.reduce((s, d) => s + (d.rating ?? 0), 0) / reviews.length
     : null
@@ -165,13 +173,13 @@ export default async function OrganisationPage({ params }: PageProps<'/organisat
 
       {/* Campaigns */}
       <main className="mx-auto max-w-5xl px-4 py-8">
-        {!demands || demands.length === 0 ? (
+        {visibleDemands.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <p className="text-sm text-gray-400">No campaigns yet for this organisation.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {demands.map((demand) => {
+            {visibleDemands.map((demand) => {
               const s = STATUS_CONFIG[demand.status] ?? { label: demand.status, dot: 'bg-gray-400', badge: 'bg-gray-100 text-gray-500' }
               const isActive = ACTIVE_STATUSES.has(demand.status)
               const count = demand.support_count_cache

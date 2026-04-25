@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import GoalNet from '@/components/GoalNet'
+import { REVIEWS_ENABLED } from '@/lib/feature-flags'
 
 interface Demand {
   id: string
@@ -301,10 +302,16 @@ function Hero({ featuredItems }: { featuredItems: Demand[] }) {
           {/* Copy */}
           <div>
             <h1 className="text-4xl sm:text-4xl font-black tracking-tight text-white leading-tight mb-4">
-              Get Heard.<br />Get Answers.<br />Get Change.
+              {REVIEWS_ENABLED ? (
+                <>Get Heard.<br />Get Answers.<br />Get Change.</>
+              ) : (
+                <>Get Answers.<br />Get Change.</>
+              )}
             </h1>
             <p className="text-emerald-200 text-base max-w-sm leading-relaxed mb-7">
-              Share your experience, ask the tough questions, or demand the change you want. When fans speak with one voice, sports organisations have to listen.
+              {REVIEWS_ENABLED
+                ? 'Share your experience, ask the tough questions, or demand the change you want. When fans speak with one voice, sports organisations have to listen.'
+                : 'Ask the tough questions or demand the change you want. When fans speak with one voice, sports organisations have to listen.'}
             </p>
             <div className="flex gap-3">
               <a
@@ -482,12 +489,19 @@ export default function HomeClient({ demands, supportedIds }: Props) {
 
         {/* Type filter pills */}
         <div className="flex gap-2 flex-wrap">
-          {([
-            { id: 'all',      label: 'All' },
-            { id: 'review',   label: 'Reviews' },
-            { id: 'qa',       label: 'Q&As' },
-            { id: 'petition', label: 'Petitions' },
-          ] as const).map((f) => (
+          {(REVIEWS_ENABLED
+            ? ([
+                { id: 'all',      label: 'All' },
+                { id: 'review',   label: 'Reviews' },
+                { id: 'qa',       label: 'Q&As' },
+                { id: 'petition', label: 'Petitions' },
+              ] as const)
+            : ([
+                { id: 'all',      label: 'All' },
+                { id: 'qa',       label: 'Q&As' },
+                { id: 'petition', label: 'Petitions' },
+              ] as const)
+          ).map((f) => (
             <button
               key={f.id}
               onClick={() => setTypeFilter(f.id)}
